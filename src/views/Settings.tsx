@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, AuditLog, AppPermission } from '../types';
 import { apiFetch } from '../lib/api';
+import { UiCustomizer } from '../components/UiCustomizer';
 import { 
   Settings as SettingsIcon, 
   Users, 
@@ -13,7 +14,8 @@ import {
   Fingerprint,
   Lock,
   ChevronRight,
-  Database
+  Database,
+  Palette
 } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,11 +30,12 @@ const ALL_PERMISSIONS: { id: AppPermission; name: string; desc: string }[] = [
   { id: 'agenda', name: 'Agenda', desc: 'Tareas y compromisos del cuartel' },
   { id: 'finances', name: 'Finanzas', desc: 'Libro de caja y gastos' },
   { id: 'rentals', name: 'Cancha', desc: 'Alquileres del salón/cancha' },
+  { id: 'subsidies', name: 'Subsidios', desc: 'Rendición de fondos y facturación' },
   { id: 'settings', name: 'Configuración', desc: 'Usuarios y auditoría del sistema' },
 ];
 
 export default function Settings() {
-  const [tab, setTab] = useState<'users' | 'audit'>('users');
+  const [tab, setTab] = useState<'users' | 'audit' | 'ui'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -118,6 +121,15 @@ export default function Settings() {
         >
           <History className="w-4 h-4 inline-block mr-2" /> Auditoría
         </button>
+        <button 
+          onClick={() => setTab('ui')}
+          className={cn(
+            "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            tab === 'ui' ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:text-slate-600"
+          )}
+        >
+          <Palette className="w-4 h-4 inline-block mr-2" /> Interfaz
+        </button>
       </div>
 
       {tab === 'users' ? (
@@ -170,7 +182,7 @@ export default function Settings() {
             ))}
           </div>
         </div>
-      ) : (
+      ) : tab === 'audit' ? (
         <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-slate-100 bg-slate-50/50">
             <h3 className="font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
@@ -224,6 +236,8 @@ export default function Settings() {
             </table>
           </div>
         </div>
+      ) : (
+        <UiCustomizer />
       )}
 
       {/* User Modal */}

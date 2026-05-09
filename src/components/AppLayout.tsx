@@ -21,28 +21,30 @@ import {
   Droplets
 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import { useUiSettings } from './UiSettingsProvider';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
-const navItems = [
-  { name: 'Dashboard', icon: LayoutDashboard, path: '/', perm: 'dashboard' },
-  { name: 'Emergencias', icon: ShieldAlert, path: '/incidents', perm: 'incidents' },
-  { name: 'Flota de Vehículos', icon: Truck, path: '/fleet', perm: 'fleet' },
-  { name: 'Personal Bomberos', icon: UserCheck, path: '/personnel', perm: 'personnel' },
-  { name: 'Depósito/Stock', icon: Boxes, path: '/inventory', perm: 'inventory' },
-  { name: 'Guardias/Staff', icon: Users, path: '/staff', perm: 'staff' },
-  { name: 'Agenda Operativa', icon: Calendar, path: '/agenda', perm: 'agenda' },
-  { name: 'Alquiler Cancha', icon: Trophy, path: '/rentals', perm: 'rentals' },
-  { name: 'Finanzas', icon: Wallet, path: '/finances', perm: 'finances' },
-  { name: 'Subsidios', icon: HandCoins, path: '/subsidies', perm: 'subsidies' },
-  { name: 'Reportes', icon: BarChart3, path: '/reports', perm: 'reports' },
-  { name: 'Configuración', icon: SettingsIcon, path: '/settings', perm: 'settings' },
-];
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, logout } = useAuth();
+  const { labels } = useUiSettings();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const navItems = [
+    { name: labels.dashboard || 'Dashboard', icon: LayoutDashboard, path: '/', perm: 'dashboard' },
+    { name: labels.incidents || 'Emergencias', icon: ShieldAlert, path: '/incidents', perm: 'incidents' },
+    { name: labels.fleet || 'Flota de Vehículos', icon: Truck, path: '/fleet', perm: 'fleet' },
+    { name: labels.personnel || 'Personal Bomberos', icon: UserCheck, path: '/personnel', perm: 'personnel' },
+    { name: labels.inventory || 'Depósito/Stock', icon: Boxes, path: '/inventory', perm: 'inventory' },
+    { name: labels.staff || 'Guardias/Staff', icon: Users, path: '/staff', perm: 'staff' },
+    { name: labels.agenda || 'Agenda Operativa', icon: Calendar, path: '/agenda', perm: 'agenda' },
+    { name: labels.rentals || 'Alquiler Cancha', icon: Trophy, path: '/rentals', perm: 'rentals' },
+    { name: labels.finances || 'Finanzas', icon: Wallet, path: '/finances', perm: 'finances' },
+    { name: labels.subsidies || 'Subsidios', icon: HandCoins, path: '/subsidies', perm: 'subsidies' },
+    { name: labels.reports || 'Reportes', icon: BarChart3, path: '/reports', perm: 'reports' },
+    { name: labels.settings || 'Configuración', icon: SettingsIcon, path: '/settings', perm: 'settings' },
+  ];
 
   const filteredNav = navItems.filter(item => 
     !item.perm || (profile?.permissions?.includes(item.perm as any))

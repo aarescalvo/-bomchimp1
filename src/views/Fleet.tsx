@@ -13,7 +13,6 @@ import {
   ChevronRight,
   Clock,
   Calendar,
-  Tool,
   Droplets
 } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';

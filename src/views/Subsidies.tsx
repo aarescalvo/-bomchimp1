@@ -23,6 +23,7 @@ import { Subsidy, SubsidyExpense } from '../types';
 
 export default function Subsidies() {
   const [subsidies, setSubsidies] = useState<Subsidy[]>([]);
+  const [summary, setSummary] = useState({ totalReceived: 0, totalSpent: 0 });
   const [selectedSubsidy, setSelectedSubsidy] = useState<Subsidy | null>(null);
   const [expenses, setExpenses] = useState<SubsidyExpense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +50,12 @@ export default function Subsidies() {
 
   const loadSubsidies = async () => {
     try {
-      const data = await apiFetch('/api/subsidies');
+      const [data, sumData] = await Promise.all([
+        apiFetch('/api/subsidies'),
+        apiFetch('/api/subsidies/summary')
+      ]);
       setSubsidies(data);
+      setSummary(sumData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -139,6 +144,32 @@ export default function Subsidies() {
         >
           <Plus className="w-4 h-4" /> Registrar Nuevo Subsidio
         </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Recibido</p>
+          <p className="text-2xl font-black text-slate-900">${summary.totalReceived.toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Rendido</p>
+          <p className="text-2xl font-black text-emerald-600">${summary.totalSpent.toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pendiente</p>
+          <p className="text-2xl font-black text-amber-500">${(summary.totalReceived - summary.totalSpent).toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Ejecución Global</p>
+          <div className="flex items-center gap-3">
+            <p className="text-2xl font-black text-slate-900">
+              {summary.totalReceived > 0 ? Math.round((summary.totalSpent / summary.totalReceived) * 100) : 0}%
+            </p>
+            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+               <div className="h-full bg-slate-900" style={{ width: `${summary.totalReceived > 0 ? (summary.totalSpent / summary.totalReceived) * 100 : 0}%` }} />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">

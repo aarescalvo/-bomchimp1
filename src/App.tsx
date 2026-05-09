@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider';
+import { UiSettingsProvider } from './components/UiSettingsProvider';
 import { AppLayout } from './components/AppLayout';
 import { Flame, LogIn } from 'lucide-react';
 import Home from './views/Home';
@@ -157,24 +158,26 @@ function Login() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
-          <Route path="/incidents" element={<PrivateRoute><Incidents /></PrivateRoute>} />
-          <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} />
-          <Route path="/staff" element={<PrivateRoute><Staff /></PrivateRoute>} />
-          <Route path="/agenda" element={<PrivateRoute><Agenda /></PrivateRoute>} />
-          <Route path="/rentals" element={<PrivateRoute><Rentals /></PrivateRoute>} />
-          <Route path="/finances" element={<PrivateRoute><Finances /></PrivateRoute>} />
-          <Route path="/fleet" element={<PrivateRoute><Fleet /></PrivateRoute>} />
-          <Route path="/personnel" element={<PrivateRoute><Personnel /></PrivateRoute>} />
-          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-          <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
-          <Route path="/subsidies" element={<PrivateRoute><Subsidies /></PrivateRoute>} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <UiSettingsProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+            <Route path="/incidents" element={<PrivateRoute><Incidents /></PrivateRoute>} />
+            <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} />
+            <Route path="/staff" element={<PrivateRoute><Staff /></PrivateRoute>} />
+            <Route path="/agenda" element={<PrivateRoute><Agenda /></PrivateRoute>} />
+            <Route path="/rentals" element={<PrivateRoute><Rentals /></PrivateRoute>} />
+            <Route path="/finances" element={<PrivateRoute><Finances /></PrivateRoute>} />
+            <Route path="/fleet" element={<PrivateRoute><Fleet /></PrivateRoute>} />
+            <Route path="/personnel" element={<PrivateRoute><Personnel /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+            <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
+            <Route path="/subsidies" element={<PrivateRoute><Subsidies /></PrivateRoute>} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </UiSettingsProvider>
   );
 }

@@ -1,1 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  :root {
+    --primary-fire: #ef4444;
+    --app-radius: 32px;
+    --font-scale: 1.0;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900;
+    font-size: calc(1rem * var(--font-scale));
+  }
+  
+  /* Apply dynamic radius to common elements */
+  .rounded-2xl { border-radius: calc(var(--app-radius) * 0.5) !important; }
+  .rounded-3xl { border-radius: calc(var(--app-radius) * 0.75) !important; }
+  .rounded-\[32px\] { border-radius: var(--app-radius) !important; }
+  .rounded-\[48px\] { border-radius: calc(var(--app-radius) * 1.5) !important; }
+}
+
+@layer utilities {
+  .bg-primary-fire { background-color: var(--primary-fire); }
+  .text-primary-fire { color: var(--primary-fire); }
+  .border-primary-fire { border-color: var(--primary-fire); }
+}

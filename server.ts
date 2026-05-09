@@ -96,6 +96,11 @@ db.exec(`
     FOREIGN KEY (vehicleId) REFERENCES vehicles(id)
   );
 
+  CREATE TABLE IF NOT EXISTS ui_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS subsidies (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -196,6 +201,29 @@ db.exec(`
 const adminExists = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
 if (!adminExists) {
   const hashedPassword = bcrypt.hashSync("admin123", 10);
+  db.prepare("INSERT OR IGNORE INTO ui_settings (key, value) VALUES (?, ?)")
+    .run("theme", JSON.stringify({
+      primaryColor: "#ef4444",
+      borderRadius: "32px",
+      compactMode: false,
+      fontScale: 1.0
+    }));
+
+  db.prepare("INSERT OR IGNORE INTO ui_settings (key, value) VALUES (?, ?)")
+    .run("menu_labels", JSON.stringify({
+      dashboard: "Resumen",
+      incidents: "Incidencias",
+      inventory: "Inventario",
+      agenda: "Agenda",
+      finances: "Caja",
+      rentals: "Alquileres",
+      staff: "Guardia",
+      fleet: "Parque Automotor",
+      personnel: "Cuerpo Activo",
+      subsidies: "Subsidios",
+      reports: "Informes"
+    }));
+
   const allPerms = JSON.stringify(["dashboard", "incidents", "inventory", "agenda", "finances", "rentals", "staff", "fleet", "personnel", "settings", "reports", "subsidies"]);
   db.prepare("INSERT INTO users (id, username, password, displayName, role, permissions) VALUES (?, ?, ?, ?, ?, ?)")
     .run(crypto.randomUUID(), "admin", hashedPassword, "Cte. Juan Diaz", "admin", allPerms);
@@ -365,6 +393,15 @@ async function startServer() {
     res.json(subsidies);
   });
 
+  app.get("/api/subsidies/summary", authenticateToken, (req, res) => {
+    const totalReceived = db.prepare("SELECT SUM(amount) as total FROM subsidies").get() as any;
+    const totalSpent = db.prepare("SELECT SUM(amount) as total FROM subsidy_expenses").get() as any;
+    res.json({
+      totalReceived: totalReceived.total || 0,
+      totalSpent: totalSpent.total || 0,
+    });
+  });
+
   app.post("/api/subsidies", authenticateToken, (req: any, res) => {
     const subsidy = { id: crypto.randomUUID(), ...req.body };
     db.prepare("INSERT INTO subsidies (id, name, origin, resolutionNumber, amount, receivedDate, expirationDate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
@@ -389,6 +426,22 @@ async function startServer() {
   app.patch("/api/subsidies/:id", authenticateToken, (req: any, res) => {
     const { status } = req.body;
     db.prepare("UPDATE subsidies SET status = ? WHERE id = ?").run(status, req.params.id);
+    res.json({ success: true });
+  });
+
+  // UI Settings
+  app.get("/api/ui-settings", (req, res) => {
+    const settings = db.prepare("SELECT * FROM ui_settings").all();
+    const config: any = {};
+    settings.forEach((s: any) => { config[s.key] = JSON.parse(s.value); });
+    res.json(config);
+  });
+
+  app.post("/api/ui-settings", authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Solo admins" });
+    const { key, value } = req.body;
+    db.prepare("INSERT OR REPLACE INTO ui_settings (key, value) VALUES (?, ?)")
+      .run(key, JSON.stringify(value));
     res.json({ success: true });
   });
 
