@@ -157,7 +157,7 @@ export function UiCustomizer() {
                   {Object.entries(labels).map(([key, value]) => (
                     <div key={key} className="space-y-1 group">
                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[.2em] ml-1 group-focus-within:text-slate-900 transition-colors">
-                         {key}
+                         {key === 'subsidies' ? 'Subsidios' : key}
                        </label>
                        <input 
                          type="text"

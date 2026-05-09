@@ -63,6 +63,8 @@ export interface Vehicle {
   assignedStaff?: string;
   insuranceExpiration?: string;
   vtvExpiration?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface VehicleTool {
@@ -146,7 +148,8 @@ export interface Incident {
   callerName: string;
   phoneNumber: string;
   address: string;
-  location?: { lat: number; lng: number };
+  lat?: number;
+  lng?: number;
   description: string;
   type: string;
   status: 'open' | 'dispatched' | 'closed';

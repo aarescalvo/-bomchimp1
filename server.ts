@@ -53,7 +53,9 @@ db.exec(`
     nextMaintenance DATE,
     insuranceExpiration DATE,
     vtvExpiration DATE,
-    assignedStaff TEXT
+    assignedStaff TEXT,
+    lat REAL,
+    lng REAL
   );
 
   CREATE TABLE IF NOT EXISTS scuba_tanks (
@@ -146,6 +148,8 @@ db.exec(`
     phoneNumber TEXT,
     description TEXT,
     status TEXT,
+    lat REAL,
+    lng REAL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -221,10 +225,11 @@ if (!adminExists) {
       fleet: "Parque Automotor",
       personnel: "Cuerpo Activo",
       subsidies: "Subsidios",
-      reports: "Informes"
+      reports: "Informes",
+      map: "Mapa Táctico"
     }));
 
-  const allPerms = JSON.stringify(["dashboard", "incidents", "inventory", "agenda", "finances", "rentals", "staff", "fleet", "personnel", "settings", "reports", "subsidies"]);
+  const allPerms = JSON.stringify(["dashboard", "incidents", "inventory", "agenda", "finances", "rentals", "staff", "fleet", "personnel", "settings", "reports", "subsidies", "map"]);
   db.prepare("INSERT INTO users (id, username, password, displayName, role, permissions) VALUES (?, ?, ?, ?, ?, ?)")
     .run(crypto.randomUUID(), "admin", hashedPassword, "Cte. Juan Diaz", "admin", allPerms);
 }
@@ -247,12 +252,24 @@ async function startServer() {
     if (!token) return res.status(401).json({ error: "No autorizado" });
 
     try {
-      const user = jwt.verify(token, JWT_SECRET);
+      const user = jwt.verify(token, JWT_SECRET) as any;
       req.user = user;
       next();
     } catch {
       res.status(403).json({ error: "Token inválido" });
     }
+  };
+
+  const requirePermission = (permission: string) => {
+    return (req: any, res: any, next: any) => {
+      // El administrador siempre tiene acceso total
+      if (req.user && req.user.role === 'admin') return next();
+      
+      if (req.user && req.user.permissions && req.user.permissions.includes(permission)) {
+        return next();
+      }
+      res.status(403).json({ error: `Acceso denegado. Se requiere permiso: ${permission}` });
+    };
   };
 
   // --- API ROUTES ---
@@ -286,12 +303,12 @@ async function startServer() {
   // --- NEW MODULES ---
 
   // Firefighters (Personal)
-  app.get("/api/firefighters", authenticateToken, (req, res) => {
+  app.get("/api/firefighters", authenticateToken, requirePermission('personnel'), (req, res) => {
     const firefighters = db.prepare("SELECT * FROM firefighters").all();
     res.json(firefighters.map((f: any) => ({ ...f, trainings: JSON.parse(f.trainings || '[]') })));
   });
 
-  app.post("/api/firefighters", authenticateToken, (req: any, res) => {
+  app.post("/api/firefighters", authenticateToken, requirePermission('personnel'), (req: any, res) => {
     const f = { id: crypto.randomUUID(), ...req.body, trainings: JSON.stringify(req.body.trainings || []) };
     db.prepare(`INSERT INTO firefighters (id, firstName, lastName, dni, birthDate, rank, bloodType, phone, email, joinDate, status, trainings) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -300,7 +317,7 @@ async function startServer() {
     res.json(f);
   });
 
-  app.patch("/api/firefighters/:id", authenticateToken, (req: any, res) => {
+  app.patch("/api/firefighters/:id", authenticateToken, requirePermission('personnel'), (req: any, res) => {
     const updates = req.body;
     if (updates.trainings) updates.trainings = JSON.stringify(updates.trainings);
     
@@ -313,38 +330,38 @@ async function startServer() {
   });
 
   // Fleet (Vehicles)
-  app.get("/api/vehicles", authenticateToken, (req, res) => {
+  app.get("/api/vehicles", authenticateToken, requirePermission('fleet'), (req, res) => {
     const vehicles = db.prepare("SELECT * FROM vehicles").all();
     res.json(vehicles);
   });
 
-  app.post("/api/vehicles", authenticateToken, (req: any, res) => {
-    const v = { id: crypto.randomUUID(), ...req.body };
-    db.prepare(`INSERT INTO vehicles (id, name, plate, type, model, year, status, lastMaintenance, nextMaintenance, assignedStaff) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(v.id, v.name, v.plate, v.type, v.model, v.year, v.status, v.lastMaintenance, v.nextMaintenance, v.assignedStaff);
+  app.post("/api/vehicles", authenticateToken, requirePermission('fleet'), (req: any, res) => {
+    const v = { id: crypto.randomUUID(), lat: -39.0664, lng: -66.1439, ...req.body };
+    db.prepare(`INSERT INTO vehicles (id, name, plate, type, model, year, status, lastMaintenance, nextMaintenance, assignedStaff, lat, lng) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(v.id, v.name, v.plate, v.type, v.model, v.year, v.status, v.lastMaintenance, v.nextMaintenance, v.assignedStaff, v.lat, v.lng);
     logAction(req.user.id, req.user.displayName, "CREATE", "fleet", `Alta móvil: ${v.name} (${v.plate})`);
     res.json(v);
   });
 
-  app.get("/api/vehicles/:id/tools", authenticateToken, (req, res) => {
+  app.get("/api/vehicles/:id/tools", authenticateToken, requirePermission('fleet'), (req, res) => {
     const tools = db.prepare("SELECT * FROM vehicle_tools WHERE vehicleId = ?").all(req.params.id);
     res.json(tools);
   });
 
-  app.post("/api/vehicles/:id/tools", authenticateToken, (req: any, res) => {
+  app.post("/api/vehicles/:id/tools", authenticateToken, requirePermission('fleet'), (req: any, res) => {
     const tool = { id: crypto.randomUUID(), vehicleId: req.params.id, ...req.body };
     db.prepare("INSERT INTO vehicle_tools (id, vehicleId, name, quantity, status) VALUES (?, ?, ?, ?, ?)")
       .run(tool.id, tool.vehicleId, tool.name, tool.quantity, tool.status);
     res.json(tool);
   });
 
-  app.get("/api/vehicles/:id/maintenance", authenticateToken, (req, res) => {
+  app.get("/api/vehicles/:id/maintenance", authenticateToken, requirePermission('fleet'), (req, res) => {
     const logs = db.prepare("SELECT * FROM maintenance_logs WHERE vehicleId = ?").all(req.params.id);
     res.json(logs);
   });
 
-  app.post("/api/vehicles/:id/maintenance", authenticateToken, (req: any, res) => {
+  app.post("/api/vehicles/:id/maintenance", authenticateToken, requirePermission('fleet'), (req: any, res) => {
     const log = { id: crypto.randomUUID(), vehicleId: req.params.id, ...req.body };
     db.prepare("INSERT INTO maintenance_logs (id, vehicleId, type, description, date, cost, technician, hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
       .run(log.id, log.vehicleId, log.type, log.description, log.date, log.cost, log.technician, log.hours);
@@ -363,12 +380,12 @@ async function startServer() {
   });
 
   // SCUBA Tanks
-  app.get("/api/scuba", authenticateToken, (req, res) => {
+  app.get("/api/scuba", authenticateToken, requirePermission('fleet'), (req, res) => {
     const tanks = db.prepare("SELECT * FROM scuba_tanks").all();
     res.json(tanks);
   });
 
-  app.post("/api/scuba", authenticateToken, (req: any, res) => {
+  app.post("/api/scuba", authenticateToken, requirePermission('fleet'), (req: any, res) => {
     const tank = { id: crypto.randomUUID(), ...req.body };
     db.prepare("INSERT INTO scuba_tanks (id, serialNumber, capacity, lastHydrostatic, nextHydrostatic, pressure, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(tank.id, tank.serialNumber, tank.capacity, tank.lastHydrostatic, tank.nextHydrostatic, tank.pressure, tank.status);
@@ -402,7 +419,7 @@ async function startServer() {
     });
   });
 
-  app.post("/api/subsidies", authenticateToken, (req: any, res) => {
+  app.post("/api/subsidies", authenticateToken, requirePermission('subsidies'), (req: any, res) => {
     const subsidy = { id: crypto.randomUUID(), ...req.body };
     db.prepare("INSERT INTO subsidies (id, name, origin, resolutionNumber, amount, receivedDate, expirationDate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
       .run(subsidy.id, subsidy.name, subsidy.origin, subsidy.resolutionNumber, subsidy.amount, subsidy.receivedDate, subsidy.expirationDate, subsidy.status);
@@ -410,12 +427,12 @@ async function startServer() {
     res.json(subsidy);
   });
 
-  app.get("/api/subsidies/:id/expenses", authenticateToken, (req, res) => {
+  app.get("/api/subsidies/:id/expenses", authenticateToken, requirePermission('subsidies'), (req, res) => {
     const expenses = db.prepare("SELECT * FROM subsidy_expenses WHERE subsidyId = ? ORDER BY date DESC").all(req.params.id);
     res.json(expenses);
   });
 
-  app.post("/api/subsidies/:id/expenses", authenticateToken, (req: any, res) => {
+  app.post("/api/subsidies/:id/expenses", authenticateToken, requirePermission('subsidies'), (req: any, res) => {
     const expense = { id: crypto.randomUUID(), subsidyId: req.params.id, userId: req.user.id, userName: req.user.displayName, ...req.body };
     db.prepare("INSERT INTO subsidy_expenses (id, subsidyId, category, description, amount, invoiceNumber, vendor, date, userId, userName, attachmentUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(expense.id, expense.subsidyId, expense.category, expense.description, expense.amount, expense.invoiceNumber, expense.vendor, expense.date, expense.userId, expense.userName, expense.attachmentUrl);
@@ -423,7 +440,7 @@ async function startServer() {
     res.json(expense);
   });
 
-  app.patch("/api/subsidies/:id", authenticateToken, (req: any, res) => {
+  app.patch("/api/subsidies/:id", authenticateToken, requirePermission('subsidies'), (req: any, res) => {
     const { status } = req.body;
     db.prepare("UPDATE subsidies SET status = ? WHERE id = ?").run(status, req.params.id);
     res.json({ success: true });
@@ -500,7 +517,7 @@ async function startServer() {
     res.json(incidents);
   });
 
-  app.post("/api/incidents", authenticateToken, (req, res) => {
+  app.post("/api/incidents", authenticateToken, requirePermission('incidents'), (req, res) => {
     const incident = {
       id: crypto.randomUUID(),
       ...req.body,
@@ -512,7 +529,7 @@ async function startServer() {
     res.json(incident);
   });
 
-  app.patch("/api/incidents/:id", authenticateToken, (req, res) => {
+  app.patch("/api/incidents/:id", authenticateToken, requirePermission('incidents'), (req, res) => {
     const { status } = req.body;
     db.prepare("UPDATE incidents SET status = ? WHERE id = ?").run(status, req.params.id);
     logAction((req as any).user.id, (req as any).user.displayName, "UPDATE", "incidents", `Cambio estado incidente ${req.params.id} a ${status}`);
@@ -525,14 +542,14 @@ async function startServer() {
     res.json(items);
   });
 
-  app.patch("/api/inventory/:id", authenticateToken, (req, res) => {
+  app.patch("/api/inventory/:id", authenticateToken, requirePermission('inventory'), (req, res) => {
     const { quantity } = req.body;
     db.prepare("UPDATE inventory SET quantity = ? WHERE id = ?").run(quantity, req.params.id);
     logAction((req as any).user.id, (req as any).user.displayName, "UPDATE", "inventory", `Ajuste stock item ID: ${req.params.id} a ${quantity}`);
     res.json({ success: true });
   });
 
-  app.post("/api/inventory", authenticateToken, (req, res) => {
+  app.post("/api/inventory", authenticateToken, requirePermission('inventory'), (req, res) => {
     const item = { id: crypto.randomUUID(), ...req.body };
     db.prepare("INSERT INTO inventory (id, name, category, quantity, unit, minStock) VALUES (?, ?, ?, ?, ?, ?)")
       .run(item.id, item.name, item.category, item.quantity, item.unit, item.minStock);
@@ -545,14 +562,14 @@ async function startServer() {
     res.json(tasks.map((t: any) => ({ ...t, dueDate: t.dueDate })));
   });
 
-  app.post("/api/agenda", authenticateToken, (req, res) => {
+  app.post("/api/agenda", authenticateToken, requirePermission('agenda'), (req, res) => {
     const task = { id: crypto.randomUUID(), ...req.body, status: "pending" };
     db.prepare("INSERT INTO agenda (id, title, description, dueDate, priority, assignedTo, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(task.id, task.title, task.description, task.dueDate, task.priority, task.assignedTo, task.status);
     res.json(task);
   });
 
-  app.patch("/api/agenda/:id", authenticateToken, (req, res) => {
+  app.patch("/api/agenda/:id", authenticateToken, requirePermission('agenda'), (req, res) => {
     const { status } = req.body;
     db.prepare("UPDATE agenda SET status = ? WHERE id = ?").run(status, req.params.id);
     res.json({ success: true });
@@ -564,7 +581,7 @@ async function startServer() {
     res.json(txs);
   });
 
-  app.post("/api/finances", authenticateToken, (req, res) => {
+  app.post("/api/finances", authenticateToken, requirePermission('finances'), (req, res) => {
     const tx = { id: crypto.randomUUID(), ...req.body, timestamp: new Date().toISOString() };
     db.prepare("INSERT INTO finances (id, amount, category, description, type, timestamp, recordedBy) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(tx.id, tx.amount, tx.category, tx.description, tx.type, tx.timestamp, tx.recordedBy);
@@ -577,14 +594,14 @@ async function startServer() {
     res.json(rentals);
   });
 
-  app.post("/api/rentals", authenticateToken, (req, res) => {
+  app.post("/api/rentals", authenticateToken, requirePermission('rentals'), (req, res) => {
     const rental = { id: crypto.randomUUID(), ...req.body };
     db.prepare("INSERT INTO rentals (id, customerName, customerPhone, startTime, endTime, price, paymentStatus) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(rental.id, rental.customerName, rental.customerPhone, rental.startTime, rental.endTime, rental.price, rental.paymentStatus);
     res.json(rental);
   });
 
-  app.patch("/api/rentals/:id", authenticateToken, (req, res) => {
+  app.patch("/api/rentals/:id", authenticateToken, requirePermission('rentals'), (req, res) => {
     const { paymentStatus } = req.body;
     db.prepare("UPDATE rentals SET paymentStatus = ? WHERE id = ?").run(paymentStatus, req.params.id);
     res.json({ success: true });
@@ -614,7 +631,7 @@ async function startServer() {
     res.json(shift);
   });
 
-  app.patch("/api/shifts/:id", authenticateToken, (req, res) => {
+  app.patch("/api/shifts/:id", authenticateToken, requirePermission('staff'), (req, res) => {
     const endTime = new Date().toISOString();
     db.prepare("UPDATE shifts SET endTime = ? WHERE id = ?").run(endTime, req.params.id);
     res.json({ success: true });
