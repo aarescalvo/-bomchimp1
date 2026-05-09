@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "operator", "firefighter"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "lastActive": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "Supplies and equipment stock.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "minStock": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "quantity", "unit"]
+    },
+    "ServiceRecord": {
+      "title": "Service History",
+      "description": "Logs of services provided by the station.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "personnel": { "type": "array", "items": { "type": "string" } },
+        "incidentId": { "type": "string" },
+        "outcome": { "type": "string" }
+      },
+      "required": ["date", "type", "description"]
+    },
+    "ShiftRecord": {
+      "title": "Staff Shift",
+      "description": "Logs of personnel clocking in/out.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed"] }
+      },
+      "required": ["userId", "startTime", "status"]
+    },
+    "Incident": {
+      "title": "Emergency Incident",
+      "description": "Calls and active incidents.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "callerName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "description": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "dispatched", "closed"] },
+        "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+      },
+      "required": ["timestamp", "type", "status", "severity"]
+    },
+    "AgendaTask": {
+      "title": "Agenda Task",
+      "description": "Scheduled maintenance or administrative tasks.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "assignedTo": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["title", "dueDate", "status"]
+    },
+    "RentalReservation": {
+      "title": "Football Field Rental",
+      "description": "Reservations for the soccer field.",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "price": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid"] },
+        "notes": { "type": "string" }
+      },
+      "required": ["customerName", "startTime", "endTime", "price", "paymentStatus"]
+    },
+    "FinancialTransaction": {
+      "title": "Financial Transaction",
+      "description": "Petty cash and rental income logs.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "recordedBy": { "type": "string" }
+      },
+      "required": ["timestamp", "type", "amount", "category", "recordedBy"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "System users" },
+    "/inventory/{itemId}": { "schema": "InventoryItem", "description": "Supplies" },
+    "/services/{serviceId}": { "schema": "ServiceRecord", "description": "Service history" },
+    "/shifts/{shiftId}": { "schema": "ShiftRecord", "description": "Personnel attendance" },
+    "/incidents/{incidentId}": { "schema": "Incident", "description": "Active calls" },
+    "/agenda/{taskId}": { "schema": "AgendaTask", "description": "Task tracker" },
+    "/rentals/{rentalId}": { "schema": "RentalReservation", "description": "Field bookings" },
+    "/finances/{transactionId}": { "schema": "FinancialTransaction", "description": "Money flow" }
+  }
+}

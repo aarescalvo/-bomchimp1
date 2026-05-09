@@ -1,0 +1,14 @@
+{
+  "name": "CUARTEL BOMBEROS VOLUNTARIOS DE CHIMPAY",
+  "description": "Sistema de Comando Central para Bomberos de Chimpay - Gestión de Incidencias, Flota, Personal, Inventario, Reportes, Subsidios (Ley 25.054) y Mapa de Hidrantes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Local Network Server",
+    "Fleet Management",
+    "Personnel Tracking",
+    "Subsidies Accountability",
+    "Audit Log"
+  ]
+}

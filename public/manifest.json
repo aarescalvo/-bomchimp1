@@ -1,0 +1,20 @@
+{
+  "name": "Bomberos Chimpay",
+  "short_name": "BV Chimpay",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#b91c1c",
+  "icons": [
+    {
+      "src": "https://files.aistudio.google.com/ais-dev-efig3ahtdr3uqmljqvdvfs-637731406593.us-east1.run.app/api/artifacts/attached_image_318df857_3840_4639_8673_093952fdfd88",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://files.aistudio.google.com/ais-dev-efig3ahtdr3uqmljqvdvfs-637731406593.us-east1.run.app/api/artifacts/attached_image_318df857_3840_4639_8673_093952fdfd88",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
