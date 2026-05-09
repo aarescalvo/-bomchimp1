@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { db } from '../db/schema';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
+import { AuthRequest } from '../types';
+import { getPagination, formatPaginatedResponse } from '../utils/pagination';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -15,11 +18,15 @@ const inventorySchema = z.object({
 });
 
 router.get("/", authenticateToken, requirePermission('inventory'), (req, res) => {
-  const items = db.prepare("SELECT * FROM inventory").all();
-  res.json(items);
+  const { page, limit, offset } = getPagination(req);
+  
+  const total = (db.prepare("SELECT COUNT(*) as count FROM inventory").get() as any).count;
+  const items = db.prepare("SELECT * FROM inventory LIMIT ? OFFSET ?").all(limit, offset);
+  
+  res.json(formatPaginatedResponse(items, total, { page, limit, offset }));
 });
 
-router.post("/", authenticateToken, requirePermission('inventory'), (req, res) => {
+router.post("/", authenticateToken, requirePermission('inventory'), (req: AuthRequest, res) => {
   const result = inventorySchema.safeParse(req.body);
   if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
@@ -31,10 +38,12 @@ router.post("/", authenticateToken, requirePermission('inventory'), (req, res) =
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(id, data.name, data.category, data.quantity, data.unit, data.minStock);
 
+  logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Inventory', `Item ${data.name} agregado al stock`);
+
   res.json({ id, ...data });
 });
 
-router.patch("/:id", authenticateToken, requirePermission('inventory'), (req, res) => {
+router.patch("/:id", authenticateToken, requirePermission('inventory'), (req: AuthRequest, res) => {
   const result = inventorySchema.partial().safeParse(req.body);
   if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
@@ -46,6 +55,8 @@ router.patch("/:id", authenticateToken, requirePermission('inventory'), (req, re
   const values = keys.map(k => validated[k]);
 
   db.prepare(`UPDATE inventory SET ${setClause} WHERE id = ?`).run(...values, req.params.id);
+
+  logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Inventory', `Stock ID: ${req.params.id} actualizado (${keys.join(", ")})`);
 
   res.json({ success: true });
 });

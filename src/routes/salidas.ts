@@ -4,6 +4,7 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
 import { getPagination, formatPaginatedResponse } from '../utils/pagination';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -79,6 +80,8 @@ router.post("/", authenticateToken, requirePermission('salidas'), (req: AuthRequ
         db.prepare("UPDATE vehicles SET status = 'en_servicio' WHERE id = ?").run(data.vehiculoId);
       }
     })();
+    
+    logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Salidas', `Salida operativa registrada: ${data.tipoServicio} - Jefe: ${data.jefeServicio}`);
 
     res.json({ id, ...data, estado: 'en_curso' });
   } catch (error) {
@@ -114,6 +117,9 @@ router.patch("/:id/finalizar", authenticateToken, requirePermission('salidas'), 
         db.prepare("UPDATE vehicles SET status = 'available', lastMaintenance = date('now') WHERE id = ?").run(salida.vehiculoId);
       }
     })();
+    
+    logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Salidas', `Salida operativa finalizada ID: ${req.params.id}`);
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Error al finalizar salida" });

@@ -4,6 +4,7 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
 import { getPagination, formatPaginatedResponse } from '../utils/pagination';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -33,6 +34,8 @@ router.post("/", authenticateToken, requirePermission('finances'), (req: AuthReq
     INSERT INTO finances (id, amount, category, description, type, recordedBy)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(id, data.amount, data.category, data.description, data.type, req.user!.displayName);
+
+  logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Treasury', `Nueva transacción (${data.type}): $${data.amount} - ${data.category}`);
 
   res.json({ id, ...data });
 });

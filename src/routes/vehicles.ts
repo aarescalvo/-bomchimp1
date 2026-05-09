@@ -3,6 +3,8 @@ import { db } from '../db/schema';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
+import { getPagination, formatPaginatedResponse } from '../utils/pagination';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -30,8 +32,12 @@ const VEHICLE_WHITELIST = [
 ];
 
 router.get("/", authenticateToken, requirePermission('fleet'), (req, res) => {
-  const vehicles = db.prepare("SELECT * FROM vehicles").all();
-  res.json(vehicles);
+  const { page, limit, offset } = getPagination(req);
+  
+  const total = (db.prepare("SELECT COUNT(*) as count FROM vehicles").get() as any).count;
+  const vehicles = db.prepare("SELECT * FROM vehicles LIMIT ? OFFSET ?").all(limit, offset);
+  
+  res.json(formatPaginatedResponse(vehicles, total, { page, limit, offset }));
 });
 
 router.post("/", authenticateToken, requirePermission('fleet'), (req: AuthRequest, res) => {
@@ -55,6 +61,8 @@ router.post("/", authenticateToken, requirePermission('fleet'), (req: AuthReques
       data.lat, data.lng
     );
 
+    logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Fleet', `Vehículo ${data.name} registrado (${data.plate})`);
+
     res.json({ id, ...data });
   } catch (error: any) {
     if (error.message.includes('UNIQUE')) return res.status(400).json({ error: "Ya existe un vehículo con esa patente" });
@@ -64,7 +72,8 @@ router.post("/", authenticateToken, requirePermission('fleet'), (req: AuthReques
 
 router.patch("/:id", authenticateToken, requirePermission('fleet'), (req: AuthRequest, res) => {
   const updates = req.body;
-  for (const key of Object.keys(updates)) {
+  const keys = Object.keys(updates);
+  for (const key of keys) {
     if (!VEHICLE_WHITELIST.includes(key)) return res.status(400).json({ error: `Campo no permitido: ${key}` });
   }
 
@@ -72,13 +81,15 @@ router.patch("/:id", authenticateToken, requirePermission('fleet'), (req: AuthRe
   if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
   const validated = result.data as any;
-  const keys = Object.keys(validated);
-  if (keys.length === 0) return res.status(400).json({ error: "Nada para actualizar" });
+  const validKeys = Object.keys(validated);
+  if (validKeys.length === 0) return res.status(400).json({ error: "Nada para actualizar" });
 
-  const setClause = keys.map(k => `${k} = ?`).join(", ");
-  const values = keys.map(k => validated[k]);
+  const setClause = validKeys.map(k => `${k} = ?`).join(", ");
+  const values = validKeys.map(k => validated[k]);
 
   db.prepare(`UPDATE vehicles SET ${setClause} WHERE id = ?`).run(...values, req.params.id);
+
+  logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Fleet', `Vehículo ID: ${req.params.id} actualizado. Campos: ${validKeys.join(", ")}`);
 
   res.json({ success: true });
 });

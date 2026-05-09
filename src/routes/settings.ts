@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/schema';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { getPagination, formatPaginatedResponse } from '../utils/pagination';
 
 const router = Router();
 
@@ -26,8 +27,12 @@ router.post("/", authenticateToken, requireAdmin, (req, res) => {
 });
 
 router.get("/audit", authenticateToken, requireAdmin, (req, res) => {
-  const logs = db.prepare("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 100").all();
-  res.json(logs);
+  const { page, limit, offset } = getPagination(req);
+  
+  const total = (db.prepare("SELECT COUNT(*) as count FROM audit_logs").get() as any).count;
+  const logs = db.prepare("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?").all(limit, offset);
+  
+  res.json(formatPaginatedResponse(logs, total, { page, limit, offset }));
 });
 
 export default router;

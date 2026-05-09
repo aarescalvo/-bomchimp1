@@ -3,6 +3,7 @@ import { db } from '../db/schema';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -33,6 +34,8 @@ router.post("/", authenticateToken, requirePermission('subsidies'), (req: AuthRe
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, data.name, data.origin, data.resolutionNumber, data.amount, data.receivedDate, data.expirationDate, data.status);
 
+  logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Subsidies', `Nuevo subsidio registrado: ${data.name} ($${data.amount})`);
+
   res.json({ id, ...data });
 });
 
@@ -61,6 +64,8 @@ router.post("/:id/expenses", authenticateToken, requirePermission('subsidies'), 
     INSERT INTO subsidy_expenses (id, subsidyId, category, description, amount, invoiceNumber, vendor, date, userId, userName)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, req.params.id, data.category, data.description, data.amount, data.invoiceNumber, data.vendor, data.date, req.user!.id, req.user!.displayName);
+
+  logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Subsidies', `Comprobante ${data.invoiceNumber || 'S/N'} rendido en subsidio ID: ${req.params.id}`);
 
   res.json({ id, ...data });
 });

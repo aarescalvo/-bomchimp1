@@ -4,6 +4,7 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
 import { getPagination, formatPaginatedResponse } from '../utils/pagination';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -64,9 +65,10 @@ router.post("/", authenticateToken, requirePermission('guardia'), (req: AuthRequ
 
   // Requirement 3.1: Log urgent operative novità to audit_logs
   if (data.tipo === 'operativa' && data.prioridad === 'urgente') {
-    db.prepare("INSERT INTO audit_logs (id, userId, userName, action, module, details) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(crypto.randomUUID(), userId, userName, "URGENTE", "guardia", `Novedad urgente: ${data.novedad.substring(0, 100)}...`);
+    logAction(userId, userName, "URGENTE", "Guardia", `Novedad urgente: ${data.novedad.substring(0, 100)}...`);
   }
+  
+  logAction(userId, userName, "CREATE", "Guardia", `Nueva novedad de guardia: ${data.turno}`);
 
   res.json({ id, ...data, userId, userName });
 });
@@ -100,6 +102,8 @@ router.patch("/:id", authenticateToken, requirePermission('guardia'), (req: Auth
 
   db.prepare(`UPDATE guardia_logs SET ${setClause} WHERE id = ?`)
     .run(...values, req.params.id);
+
+  logAction(req.user!.id, req.user!.displayName, "UPDATE", "Guardia", `Modificada novedad guardia ID: ${req.params.id}`);
 
   res.json({ success: true });
 });

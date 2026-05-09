@@ -4,6 +4,7 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
 import { getPagination, formatPaginatedResponse } from '../utils/pagination';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -58,6 +59,8 @@ router.post("/", authenticateToken, requirePermission('personnel'), (req: AuthRe
       data.bloodType, data.phone, data.email, data.joinDate, data.status,
       data.licenseExpiration, data.medicalExpiration, data.eppStatus
     );
+    
+    logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Firefighters', `Creado bombero: ${data.firstName} ${data.lastName} (DNI: ${data.dni})`);
 
     res.json({ id, ...data });
   } catch (error: any) {
@@ -86,6 +89,8 @@ router.patch("/:id", authenticateToken, requirePermission('personnel'), (req: Au
 
   db.prepare(`UPDATE firefighters SET ${setClause} WHERE id = ?`)
     .run(...values, req.params.id);
+
+  logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Firefighters', `Actualizado bombero ID: ${req.params.id}. Campos: ${keys.join(", ")}`);
 
   res.json({ success: true });
 });
@@ -124,6 +129,8 @@ router.post("/:id/cursos", authenticateToken, requirePermission('habilitaciones'
     INSERT INTO cursos_ibnca (id, firefighterId, nombreCurso, organismo, fechaAprobacion, fechaVencimiento, certificadoUrl)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(id, req.params.id, data.nombreCurso, data.organismo, data.fechaAprobacion, data.fechaVencimiento, data.certificadoUrl);
+  
+  logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Habilitaciones', `Agregado curso ${data.nombreCurso} a bombero ID: ${req.params.id}`);
 
   res.json({ id, ...data });
 });

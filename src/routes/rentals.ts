@@ -3,6 +3,7 @@ import { db } from '../db/schema';
 import { authenticateToken, requirePermission, requireAdmin } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest } from '../types';
+import { logAction } from '../utils/logger';
 import crypto from 'crypto';
 
 const router = Router();
@@ -97,14 +98,18 @@ router.post("/turnos", authenticateToken, requirePermission('cancha'), (req: Aut
         `).run(crypto.randomUUID(), data.senia, `Seña cancha: ${data.clienteNombre} (${data.fecha})`, req.user!.displayName);
       }
     })();
+    
+    logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Cancha', `Nueva reserva para ${data.clienteNombre} el ${data.fecha} ${data.horaInicio}`);
+
     res.json({ id, ...data, saldoPendiente });
   } catch (error) {
     res.status(500).json({ error: "Error al crear reserva" });
   }
 });
 
-router.patch("/turnos/:id/confirmar", authenticateToken, requirePermission('cancha'), (req, res) => {
+router.patch("/turnos/:id/confirmar", authenticateToken, requirePermission('cancha'), (req: AuthRequest, res) => {
   db.prepare("UPDATE turnos_cancha SET estado = 'confirmado' WHERE id = ?").run(req.params.id);
+  logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Cancha', `Confirmada reserva ID: ${req.params.id}`);
   res.json({ success: true });
 });
 
@@ -128,18 +133,20 @@ router.patch("/turnos/:id/pagar-saldo", authenticateToken, requirePermission('ca
         `).run(crypto.randomUUID(), turno.saldoPendiente, `Saldo cancha: ${turno.clienteNombre} (${turno.fecha})`, req.user!.displayName);
       }
     })();
+    logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Cancha', `Cobrado saldo pendiente reserva ID: ${req.params.id}`);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Error al registrar pago" });
   }
 });
 
-router.patch("/turnos/:id/cancelar", authenticateToken, requirePermission('cancha'), (req, res) => {
+router.patch("/turnos/:id/cancelar", authenticateToken, requirePermission('cancha'), (req: AuthRequest, res) => {
   db.prepare("UPDATE turnos_cancha SET estado = 'cancelado' WHERE id = ?").run(req.params.id);
+  logAction(req.user!.id, req.user!.displayName, 'DELETE', 'Cancha', `Cancelada reserva ID: ${req.params.id}`);
   res.json({ success: true });
 });
 
-router.post("/bloqueos", authenticateToken, requireAdmin, (req, res) => {
+router.post("/bloqueos", authenticateToken, requireAdmin, (req: AuthRequest, res) => {
   const schema = z.object({
     fecha: z.string(),
     horaInicio: z.string(),
@@ -153,6 +160,7 @@ router.post("/bloqueos", authenticateToken, requireAdmin, (req, res) => {
   try {
     db.prepare("INSERT INTO bloqueos_cancha (id, fecha, horaInicio, horaFin, motivo) VALUES (?, ?, ?, ?, ?)")
       .run(id, result.data.fecha, result.data.horaInicio, result.data.horaFin, result.data.motivo);
+    logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Cancha', `Bloqueo de horario el ${result.data.fecha} ${result.data.horaInicio}`);
     res.json({ id, ...result.data });
   } catch (error) {
     res.status(500).json({ error: "Error al bloquear horario" });
@@ -163,7 +171,7 @@ router.get("/tarifas", authenticateToken, (req, res) => {
   res.json(db.prepare("SELECT * FROM tarifas_cancha WHERE activo = 1").all());
 });
 
-router.post("/tarifas", authenticateToken, requireAdmin, (req, res) => {
+router.post("/tarifas", authenticateToken, requireAdmin, (req: AuthRequest, res) => {
   const schema = z.object({
     nombre: z.string(),
     precio: z.number(),
@@ -177,6 +185,7 @@ router.post("/tarifas", authenticateToken, requireAdmin, (req, res) => {
   const id = crypto.randomUUID();
   db.prepare("INSERT INTO tarifas_cancha (id, nombre, precio, diaSemana, horaDesde, horaHasta) VALUES (?, ?, ?, ?, ?, ?)")
     .run(id, result.data.nombre, result.data.precio, result.data.diaSemana, result.data.horaDesde, result.data.horaHasta);
+  logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Settings', `Nueva tarifa cancha: ${result.data.nombre}`);
   res.json({ id, ...result.data });
 });
 

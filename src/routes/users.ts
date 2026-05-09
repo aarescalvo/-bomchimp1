@@ -3,6 +3,7 @@ import { db } from '../db/schema';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { z } from 'zod';
 import { AuthRequest, UserRow } from '../types';
+import { logAction } from '../utils/logger';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
@@ -38,6 +39,8 @@ router.post("/", authenticateToken, requireAdmin, (req: AuthRequest, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(id, username, hashedPassword, displayName, role, email, JSON.stringify(permissions));
 
+    logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Users', `Creado usuario: ${username} (${role})`);
+
     res.json({ id, username, displayName, role, email, permissions });
   } catch (error: any) {
     if (error.message.includes('UNIQUE')) return res.status(400).json({ error: "El usuario ya existe" });
@@ -69,6 +72,8 @@ router.patch("/:id", authenticateToken, requireAdmin, (req: AuthRequest, res) =>
     const values = keys.map(k => k === 'permissions' ? JSON.stringify(validated[k]) : validated[k]);
     db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`).run(...values, req.params.id);
   }
+  
+  logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Users', `Actualizado usuario ID: ${req.params.id} (${Object.keys(updates).join(", ")})`);
 
   res.json({ success: true });
 });
