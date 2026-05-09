@@ -1,265 +1,342 @@
 import React, { useState, useEffect } from 'react';
-import { RentalReservation } from '../types';
-import { Trophy, Plus, DollarSign, Clock, User, X } from 'lucide-react';
-import { formatDate } from '../lib/utils';
-import { useAuth } from '../components/AuthProvider';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../components/AuthProvider';
+import { 
+  Calendar as CalendarIcon, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Trophy,
+  Phone,
+  User,
+  Clock,
+  DollarSign,
+  Ban,
+  CheckCircle2
+} from 'lucide-react';
+import { format, addDays, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+interface Slot {
+  time: string;
+  status: 'libre' | 'reservado' | 'confirmado' | 'pagado' | 'bloqueado';
+  data: any | null;
+}
 
 export default function Rentals() {
-  const [rentals, setRentals] = useState<RentalReservation[]>([]);
+  const { user } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const { profile } = useAuth();
+  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [tarifas, setTarifas] = useState<any[]>([]);
+
+  // Form state
   const [formData, setFormData] = useState({
-    customerName: '',
-    customerPhone: '',
-    startTime: '',
-    endTime: '',
-    price: 3500,
-    paymentStatus: 'pending' as 'pending' | 'paid'
+    clienteNombre: '',
+    clienteTelefono: '',
+    precioTotal: 1000,
+    senia: 0,
+    medioPagoSenia: 'efectivo',
+    notas: ''
   });
 
-  const loadRentals = async () => {
+  const fetchSlots = async () => {
+    setLoading(true);
     try {
-      const data = await apiFetch('/api/rentals');
-      setRentals(data);
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const response = await apiFetch(`/api/cancha/disponibilidad?fecha=${dateStr}`);
+      setSlots(response);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!profile) return;
-    loadRentals();
-    const interval = setInterval(loadRentals, 5000);
-    return () => clearInterval(interval);
-  }, [profile]);
+    fetchSlots();
+    apiFetch('/api/cancha/tarifas').then(setTarifas);
+  }, [selectedDate]);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleCreateReserva = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const rentalData = {
-        ...formData,
-        startTime: new Date(formData.startTime).toISOString(),
-        endTime: new Date(formData.endTime).toISOString(),
-      };
-      
-      await apiFetch('/api/rentals', {
+      await apiFetch('/api/cancha/turnos', {
         method: 'POST',
-        body: JSON.stringify(rentalData)
+        body: JSON.stringify({
+          ...formData,
+          fecha: format(selectedDate, 'yyyy-MM-dd'),
+          horaInicio: selectedSlot.time,
+          horaFin: selectedSlot.endTime
+        })
       });
-  
-      if (formData.paymentStatus === 'paid') {
-        await apiFetch('/api/finances', {
-          method: 'POST',
-          body: JSON.stringify({
-            amount: formData.price,
-            category: 'Alquiler Cancha',
-            description: `Pago alquiler: ${formData.customerName}`,
-            type: 'income',
-            recordedBy: profile?.displayName || 'Sistema'
-          })
-        });
-      }
-  
       setShowModal(false);
-      setFormData({ customerName: '', customerPhone: '', startTime: '', endTime: '', price: 3500, paymentStatus: 'pending' });
-      loadRentals();
-    } catch (err) {
-      console.error(err);
+      fetchSlots();
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
-  const markAsPaid = async (rental: RentalReservation) => {
-    try {
-      await apiFetch(`/api/rentals/${rental.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ paymentStatus: 'paid' })
+  const handleSlotClick = (slot: Slot) => {
+    if (slot.status === 'libre') {
+      setSelectedSlot(slot);
+      setShowModal(true);
+      setFormData({
+        clienteNombre: '',
+        clienteTelefono: '',
+        precioTotal: tarifas[0]?.precio || 1500,
+        senia: 0,
+        medioPagoSenia: 'efectivo',
+        notas: ''
       });
-      await apiFetch('/api/finances', {
-        method: 'POST',
-        body: JSON.stringify({
-          amount: rental.price,
-          category: 'Alquiler Cancha',
-          description: `Pago alquiler: ${rental.customerName}`,
-          type: 'income',
-          recordedBy: profile?.displayName || 'Sistema'
-        })
-      });
-      loadRentals();
-    } catch (err) {
-      console.error(err);
+    } else if (slot.status !== 'bloqueado') {
+      setSelectedSlot(slot);
+      setShowModal(true);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'reservado': return 'bg-amber-100 border-amber-200 text-amber-700';
+      case 'confirmado': return 'bg-blue-100 border-blue-200 text-blue-700';
+      case 'pagado': return 'bg-emerald-100 border-emerald-200 text-emerald-700';
+      case 'bloqueado': return 'bg-slate-100 border-slate-200 text-slate-400';
+      default: return 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50';
     }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Gestión Deportiva</h1>
-          <p className="text-slate-500 font-medium">Alquiler de cancha y control de ingresos extras.</p>
+    <div className="space-y-6 pb-20 max-w-4xl mx-auto font-sans">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-violet-600/20">
+            <Trophy className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 leading-none">Gestión de Cancha</h1>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 italic">Turnos y Alquileres Externos</p>
+          </div>
         </div>
-        {profile?.role !== 'firefighter' && (
-          <button 
-            onClick={() => setShowModal(true)}
-            className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 active:scale-95"
-          >
-            <Plus className="w-6 h-6" />
-            Nueva Reserva
-          </button>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {rentals.map(rental => (
-          <div key={rental.id} className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm flex flex-col group hover:border-emerald-200 transition-all">
-            <div className={`p-5 border-b flex items-center justify-between transition-colors ${rental.paymentStatus === 'paid' ? 'bg-emerald-50/50 border-emerald-50' : 'bg-slate-50 border-slate-100'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${rental.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-emerald-500 shadow-sm'}`}>
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <span className="font-black text-slate-900 text-sm tracking-tight">RESERVA #{rental.id.slice(0, 4).toUpperCase()}</span>
-              </div>
-              <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                rental.paymentStatus === 'paid' ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-600 border border-amber-200'
-              }`}>
-                {rental.paymentStatus === 'paid' ? 'Pagado' : 'Pendiente'}
-              </span>
-            </div>
+        <div className="flex items-center gap-2 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+          <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-2 hover:bg-slate-50 rounded-lg"><ChevronLeft className="w-4 h-4 text-slate-400" /></button>
+          <div className="px-4 text-center min-w-[140px]">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{format(selectedDate, 'EEEE', { locale: es })}</p>
+            <p className="font-black text-slate-900 leading-tight">{format(selectedDate, 'd MMM yyyy', { locale: es })}</p>
+          </div>
+          <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-2 hover:bg-slate-50 rounded-lg"><ChevronRight className="w-4 h-4 text-slate-400" /></button>
+        </div>
+      </header>
 
-            <div className="p-7 space-y-6 flex-1">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Titular</p>
-                <div className="flex items-center gap-3 text-slate-900 font-bold group-hover:translate-x-1 transition-transform">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-xs text-slate-500">
-                    {rental.customerName[0]}
-                  </div>
-                  {rental.customerName}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 bg-slate-50 rounded-2xl p-4 border border-slate-100 border-dashed">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Fecha</p>
-                  <p className="text-sm font-black text-slate-700">{formatDate(rental.startTime).split(' ')[0]}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Desde</p>
-                  <p className="text-sm font-black text-slate-700 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-emerald-500" />
-                    {formatDate(rental.startTime).split(' ')[1]}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Tarifa</p>
-                  <p className="text-3xl font-black text-slate-900 leading-none">${rental.price.toLocaleString()}</p>
-                </div>
-                {rental.paymentStatus === 'pending' && profile?.role !== 'firefighter' && (
-                  <button 
-                    onClick={() => markAsPaid(rental)}
-                    className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
-                  >
-                    COBRAR
-                  </button>
+      {/* Grid de Horarios */}
+      <div className="bg-white rounded-[32px] border border-slate-200 p-6 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="h-64 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2">
+            {slots.map((slot) => (
+              <button
+                key={slot.time}
+                onClick={() => handleSlotClick(slot)}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-[0.98]",
+                  getStatusColor(slot.status)
                 )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {rentals.length === 0 && (
-          <div className="lg:col-span-3 py-32 text-center space-y-6">
-             <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto grayscale opacity-50">
-                <Trophy className="w-12 h-12 text-emerald-500" />
-             </div>
-             <div>
-                <p className="text-slate-900 font-black text-xl">Sin reservas registradas</p>
-                <p className="text-slate-400 font-medium">Comienza a gestionar el alquiler de la cancha hoy.</p>
-             </div>
+              >
+                <div className="flex items-center gap-6">
+                  <div className="flex flex-col items-start min-w-[60px]">
+                    <span className="text-sm font-black italic">{slot.time}</span>
+                    <span className="text-[10px] font-bold opacity-50">{slot.endTime}</span>
+                  </div>
+                  
+                  {slot.status === 'libre' ? (
+                    <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-widest opacity-40">
+                      <Plus className="w-3 h-3" /> Disponible
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start">
+                      <span className="text-xs font-black uppercase tracking-tight">{slot.data?.clienteNombre || 'Horario Bloqueado'}</span>
+                      {slot.data?.clienteTelefono && (
+                        <span className="text-[9px] font-bold opacity-60 flex items-center gap-1 mt-1">
+                          <Phone className="w-2 h-2" /> {slot.data.clienteTelefono}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {slot.status === 'pagado' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                  {slot.status === 'reservado' && <DollarSign className="w-4 h-4 text-amber-500" />}
+                  {slot.status === 'bloqueado' && <Ban className="w-4 h-4 text-slate-300" />}
+                  <div className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                    {slot.status}
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Registrar Turno</h2>
+      {/* Modal - Reserva o Detalle */}
+      {showModal && selectedSlot && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase italic">
+                  {selectedSlot.status === 'libre' ? 'Nueva Reserva' : 'Detalle del Turno'}
+                </h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mt-1">
+                  <Clock className="w-3 h-3" /> {selectedSlot.time} a {selectedSlot.endTime} — {format(selectedDate, 'dd/MM')}
+                </p>
+              </div>
               <button 
                 onClick={() => setShowModal(false)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                className="w-8 h-8 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 font-bold"
               >
-                <X className="text-slate-400 w-6 h-6" />
+                ✕
               </button>
             </div>
-            
-            <form onSubmit={handleAdd} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Titular de la Reserva</label>
-                <input 
-                  required 
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 font-bold text-slate-900 focus:ring-4 ring-emerald-500/10 outline-none transition-all" 
-                  placeholder="Nombre completo"
-                  value={formData.customerName} 
-                  onChange={e => setFormData({...formData, customerName: e.target.value})} 
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desde</label>
-                  <input 
-                    type="datetime-local" 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 font-bold text-sm focus:ring-4 ring-emerald-500/10 outline-none" 
-                    value={formData.startTime} 
-                    onChange={e => setFormData({...formData, startTime: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hasta</label>
-                  <input 
-                    type="datetime-local" 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 font-bold text-sm focus:ring-4 ring-emerald-500/10 outline-none" 
-                    value={formData.endTime} 
-                    onChange={e => setFormData({...formData, endTime: e.target.value})} 
-                  />
-                </div>
-              </div>
+            <div className="p-8">
+              {selectedSlot.status === 'libre' ? (
+                <form onSubmit={handleCreateReserva} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Cliente</label>
+                      <input 
+                        className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-800 outline-none focus:border-violet-600"
+                        value={formData.clienteNombre}
+                        onChange={e => setFormData({...formData, clienteNombre: e.target.value})}
+                        required
+                        placeholder="Ej: Daniel Martinez"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Celular</label>
+                        <input 
+                          className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-800"
+                          value={formData.clienteTelefono}
+                          onChange={e => setFormData({...formData, clienteTelefono: e.target.value})}
+                          placeholder="2984..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio Total</label>
+                        <input 
+                          type="number"
+                          className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-800"
+                          value={formData.precioTotal}
+                          onChange={e => setFormData({...formData, precioTotal: Number(e.target.value)})}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seña en Pesos</label>
+                        <input 
+                          type="number"
+                          className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-800"
+                          value={formData.senia}
+                          onChange={e => setFormData({...formData, senia: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Medio Pago Seña</label>
+                        <select 
+                          className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-800 outline-none"
+                          value={formData.medioPagoSenia}
+                          onChange={e => setFormData({...formData, medioPagoSenia: e.target.value})}
+                        >
+                          <option value="efectivo">Efectivo</option>
+                          <option value="transferencia">Transferencia</option>
+                          <option value="mercado_pago">Mercado Pago</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Precio Turno ($)</label>
-                  <input 
-                    type="number" 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 font-black text-slate-900 focus:ring-4 ring-emerald-500/10 outline-none" 
-                    value={formData.price} 
-                    onChange={e => setFormData({...formData, price: Number(e.target.value)})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cobro</label>
-                  <select 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 font-bold text-sm focus:ring-4 ring-emerald-500/10 outline-none" 
-                    value={formData.paymentStatus} 
-                    onChange={e => setFormData({...formData, paymentStatus: e.target.value as any})}
+                  <button 
+                    type="submit"
+                    className="w-full h-14 bg-violet-600 text-white rounded-xl font-black uppercase tracking-[.2em] text-[10px] shadow-xl shadow-violet-600/20 active:scale-95 transition-all"
                   >
-                    <option value="pending">Pendiente</option>
-                    <option value="paid">Ya Pagó</option>
-                  </select>
-                </div>
-              </div>
+                    Confirmar Reserva
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                        <User className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-black text-slate-900 uppercase italic leading-none">{selectedSlot.data.clienteNombre}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">{selectedSlot.data.clienteTelefono || 'Sin teléfono'}</p>
+                      </div>
+                    </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95"
-              >
-                CONFIRMAR RESERVA
-              </button>
-            </form>
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                      <div className="p-4 bg-slate-50 rounded-2xl">
+                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Precio Total</p>
+                         <p className="text-lg font-black text-slate-900">${selectedSlot.data.precioTotal}</p>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl">
+                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo deudor</p>
+                         <p className={cn("text-lg font-black", selectedSlot.data.saldoPendiente > 0 ? "text-red-600" : "text-emerald-600")}>
+                           ${selectedSlot.data.saldoPendiente}
+                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {selectedSlot.data.estado !== 'pagado' && (
+                      <button 
+                        onClick={async () => {
+                          const medio = prompt('Medio de pago (efectivo/transferencia/mp):');
+                          if (medio) {
+                            await apiFetch(`/api/cancha/turnos/${selectedSlot.data.id}/pagar-saldo`, { method: 'PATCH', body: JSON.stringify({ medioPagoSaldo: medio }) });
+                            fetchSlots();
+                            setShowModal(false);
+                          }
+                        }}
+                        className="w-full h-14 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-[.2em] text-[10px] shadow-xl shadow-emerald-600/20 active:scale-95 transition-all"
+                      >
+                        Cobrar Saldo Pendiente
+                      </button>
+                    )}
+                    <button 
+                       onClick={async () => {
+                         if (confirm('¿Cancelar reserva?')) {
+                           await apiFetch(`/api/cancha/turnos/${selectedSlot.data.id}/cancelar`, { method: 'PATCH' });
+                           fetchSlots();
+                           setShowModal(false);
+                         }
+                       }}
+                       className="w-full h-14 bg-white border border-red-100 text-red-600 rounded-xl font-black uppercase tracking-[.2em] text-[10px] active:scale-95 transition-all"
+                    >
+                      Cancelar Reserva
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(' ');
 }

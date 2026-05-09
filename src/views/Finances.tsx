@@ -207,13 +207,23 @@ export default function Finances() {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoría</label>
                 <select className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 font-bold text-sm focus:ring-4 ring-slate-900/5 outline-none" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                  <option>Alquiler Cancha</option>
-                  <option>Compra de Suministros</option>
-                  <option>Mantenimiento Edilicio</option>
-                  <option>Reparación de Unidades</option>
-                  <option>Servicios e Impuestos</option>
-                  <option>Combustible</option>
-                  <option>Varios</option>
+                  <optgroup label="Ingresos">
+                    <option value="alquiler_cancha">Alquiler Cancha</option>
+                    <option value="ingreso_subsidio_nacional">Subsidio Nacional</option>
+                    <option value="ingreso_subsidio_provincial">Subsidio Provincial</option>
+                    <option value="ingreso_donacion">Donación</option>
+                    <option value="otros_ingresos">Otros Ingresos</option>
+                  </optgroup>
+                  <optgroup label="Egresos">
+                    <option value="combustible">Combustible</option>
+                    <option value="mantenimiento_unidades">Mantenimiento Unidades</option>
+                    <option value="mantenimiento_edilicio">Mantenimiento Edilicio</option>
+                    <option value="seguros">Seguros</option>
+                    <option value="servicios">Servicios (Luz/Gas/Tel)</option>
+                    <option value="materiales_operativos">Materiales Operativos</option>
+                    <option value="sueldos_viaticos">Sueldos/Viáticos</option>
+                    <option value="otros_egresos">Otros Egresos</option>
+                  </optgroup>
                 </select>
               </div>
               <div className="space-y-2">

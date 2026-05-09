@@ -9,7 +9,14 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-    throw new Error(error.error || 'Error en la petición');
+    
+    if (response.status === 401 && error.code === 'TOKEN_EXPIRED') {
+       window.location.href = '/login';
+    }
+    
+    const err = new Error(error.error || 'Error en la petición');
+    (err as any).code = error.code;
+    throw err;
   }
 
   return response.json();

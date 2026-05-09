@@ -7,7 +7,7 @@ import { Flame, LogIn } from 'lucide-react';
 import Home from './views/Home';
 import Incidents from './views/Incidents';
 import Inventory from './views/Inventory';
-import Staff from './views/Staff';
+import Guardia from './views/Guardia';
 import Agenda from './views/Agenda';
 import Rentals from './views/Rentals';
 import Finances from './views/Finances';
@@ -16,6 +16,7 @@ import Personnel from './views/Personnel';
 import Settings from './views/Settings';
 import Reports from './views/Reports';
 import Subsidies from './views/Subsidies';
+import Alerts from './views/Alerts';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -46,6 +47,9 @@ function Login() {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+  const [mustChangePassword, setMustChangePassword] = React.useState(false);
+  const [newPassword, setNewPassword] = React.useState('');
+  const [userId, setUserId] = React.useState('');
   
   if (user) return <Navigate to="/" />;
 
@@ -54,13 +58,58 @@ function Login() {
     setIsLoggingIn(true);
     setError('');
     try {
-      await login(username, password);
+      const res: any = await login(username, password);
+      if (res?.mustChangePassword) {
+        setMustChangePassword(true);
+        setUserId(res.userId);
+      }
     } catch (err: any) {
-      setError('Credenciales incorrectas o usuario deshabilitado');
+      setError(err.message || 'Credenciales incorrectas');
     } finally {
       setIsLoggingIn(false);
     }
   };
+
+  const handleForcedChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/auth/change-password-forced', {
+        method: 'POST',
+        body: JSON.stringify({ userId, newPassword })
+      });
+      alert('Contraseña actualizada. Inicie sesión nuevamente.');
+      setMustChangePassword(false);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  if (mustChangePassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
+        <div className="w-full max-w-sm bg-white p-8 rounded-[32px] shadow-2xl space-y-8">
+          <div className="text-center">
+             <h2 className="text-2xl font-black text-slate-900 uppercase">Cambio Obligatorio</h2>
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Debe actualizar su clave para continuar</p>
+          </div>
+          <form onSubmit={handleForcedChange} className="space-y-6">
+             <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nueva Clave</label>
+                <input 
+                   type="password" 
+                   value={newPassword}
+                   onChange={e => setNewPassword(e.target.value)}
+                   className="w-full h-14 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold outline-none focus:border-red-600"
+                   placeholder="Mínimo 6 caracteres"
+                   required
+                />
+             </div>
+             <button type="submit" className="w-full h-14 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Actualizar y Reingresar</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-slate-950 font-sans">
@@ -81,12 +130,12 @@ function Login() {
                   referrerPolicy="no-referrer"
                 />
             </div>
-            <h1 className="text-4xl font-black uppercase tracking-tighter leading-tight">
+            <h1 className="text-4xl font-black uppercase tracking-tighter leading-tight italic">
               Cuartel Bomberos<br/>Voluntarios de Chimpay
             </h1>
           </div>
-          <p className="text-xl text-slate-300 max-w-lg leading-relaxed font-medium uppercase tracking-tight text-sm opacity-80">
-            Sistema de Comando Central y Gestión Operativa Integral
+          <p className="text-xl text-slate-300 max-w-lg leading-relaxed font-medium uppercase tracking-tight text-sm opacity-80 italic">
+            Sistema de Comando Central y Gestión Operativa Integral v2.0
           </p>
         </div>
       </div>
@@ -103,7 +152,7 @@ function Login() {
                 />
                </div>
             </div>
-            <h2 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tight">Acceso Operativo</h2>
+            <h2 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tight italic">Acceso Operativo</h2>
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[.3em]">Ingrese sus credenciales de guardia</p>
           </div>
           
@@ -147,7 +196,7 @@ function Login() {
 
           <div className="pt-10 border-t border-slate-200 text-center">
             <p className="text-[9px] text-slate-400 font-black uppercase tracking-[.4em]">
-              SISTEMA DE GESTIÓN LAN V2.0 — CHIMPAY RN
+              SISTEMA BOOT v2.0 © 2026 — CHIMPAY RN
             </p>
           </div>
         </div>
@@ -166,7 +215,7 @@ export default function App() {
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
             <Route path="/incidents" element={<PrivateRoute><Incidents /></PrivateRoute>} />
             <Route path="/inventory" element={<PrivateRoute><Inventory /></PrivateRoute>} />
-            <Route path="/staff" element={<PrivateRoute><Staff /></PrivateRoute>} />
+            <Route path="/guardia" element={<PrivateRoute><Guardia /></PrivateRoute>} />
             <Route path="/agenda" element={<PrivateRoute><Agenda /></PrivateRoute>} />
             <Route path="/rentals" element={<PrivateRoute><Rentals /></PrivateRoute>} />
             <Route path="/finances" element={<PrivateRoute><Finances /></PrivateRoute>} />
@@ -175,9 +224,11 @@ export default function App() {
             <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
             <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/subsidies" element={<PrivateRoute><Subsidies /></PrivateRoute>} />
+            <Route path="/alerts" element={<PrivateRoute><Alerts /></PrivateRoute>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
     </UiSettingsProvider>
   );
 }
+

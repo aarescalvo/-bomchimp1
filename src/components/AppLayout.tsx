@@ -12,6 +12,7 @@ import {
   X,
   LogOut,
   Bell,
+  ClipboardList,
   Truck,
   UserCheck,
   Settings as SettingsIcon,
@@ -33,17 +34,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { name: labels.dashboard || 'Dashboard', icon: LayoutDashboard, path: '/', perm: 'dashboard' },
+    { name: 'Libreta de Guardia', icon: ClipboardList, path: '/guardia', perm: 'guardia' },
     { name: labels.incidents || 'Emergencias', icon: ShieldAlert, path: '/incidents', perm: 'incidents' },
     { name: labels.fleet || 'Flota de Vehículos', icon: Truck, path: '/fleet', perm: 'fleet' },
     { name: labels.personnel || 'Personal Bomberos', icon: UserCheck, path: '/personnel', perm: 'personnel' },
     { name: labels.inventory || 'Depósito/Stock', icon: Boxes, path: '/inventory', perm: 'inventory' },
-    { name: labels.staff || 'Guardias/Staff', icon: Users, path: '/staff', perm: 'staff' },
-    { name: labels.agenda || 'Agenda Operativa', icon: Calendar, path: '/agenda', perm: 'agenda' },
+    { name: 'Avisos y Alertas', icon: Bell, path: '/alerts', perm: 'alerts' },
     { name: labels.rentals || 'Alquiler Cancha', icon: Trophy, path: '/rentals', perm: 'rentals' },
-    { name: labels.finances || 'Finanzas', icon: Wallet, path: '/finances', perm: 'finances' },
+    { name: labels.finances || 'Tesorería', icon: Wallet, path: '/finances', perm: 'finances' },
     { name: labels.subsidies || 'Subsidios', icon: HandCoins, path: '/subsidies', perm: 'subsidies' },
     { name: labels.reports || 'Reportes', icon: BarChart3, path: '/reports', perm: 'reports' },
-    { name: labels.settings || 'Configuración', icon: SettingsIcon, path: '/settings', perm: 'settings' },
+    { name: labels.settings || 'Ajustes Sistema', icon: SettingsIcon, path: '/settings', perm: 'settings' },
   ];
 
   const filteredNav = navItems.filter(item => 

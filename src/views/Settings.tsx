@@ -23,15 +23,17 @@ import { motion, AnimatePresence } from 'motion/react';
 const ALL_PERMISSIONS: { id: AppPermission; name: string; desc: string }[] = [
   { id: 'dashboard', name: 'Dashboard', desc: 'Vista principal y estadísticas' },
   { id: 'incidents', name: 'Emergencias', desc: 'Gestión de incidentes y despachos' },
+  { id: 'salidas', name: 'Salidas Op.', desc: 'Registro de salidas operativas' },
   { id: 'fleet', name: 'Flota', desc: 'Vehículos, herramientas y mantenimiento' },
-  { id: 'personnel', name: 'Personal Bomberos', desc: 'Legajos y capacitaciones' },
+  { id: 'personnel', name: 'Personal', desc: 'Legajos, capacitaciones e IBNCA' },
   { id: 'inventory', name: 'Stock', desc: 'Equipamiento y suministros' },
-  { id: 'staff', name: 'Guardias', desc: 'Control de personal de guardia' },
-  { id: 'agenda', name: 'Agenda', desc: 'Tareas y compromisos del cuartel' },
-  { id: 'finances', name: 'Finanzas', desc: 'Libro de caja y gastos' },
-  { id: 'rentals', name: 'Cancha', desc: 'Alquileres del salón/cancha' },
+  { id: 'guardia', name: 'Libreta Guardia', desc: 'Libreta digital de novedades' },
+  { id: 'alerts', name: 'Alertas', desc: 'Vencimientos y avisos unificados' },
+  { id: 'finances', name: 'Tesorería', desc: 'Libro de caja y gastos' },
+  { id: 'rentals', name: 'Cancha', desc: 'Alquileres de turnos de cancha' },
   { id: 'subsidies', name: 'Subsidios', desc: 'Rendición de fondos y facturación' },
-  { id: 'settings', name: 'Configuración', desc: 'Usuarios y auditoría del sistema' },
+  { id: 'reports', name: 'Reportes', desc: 'Estadísticas de jefatura' },
+  { id: 'settings', name: 'Sistema', desc: 'Ajustes, usuarios y auditoría' },
 ];
 
 export default function Settings() {
