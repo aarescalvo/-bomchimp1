@@ -33,9 +33,11 @@ const FIREFIGHTER_WHITELIST = [
 
 router.get("/", authenticateToken, requirePermission('personnel'), (req, res) => {
   const { page, limit, offset } = getPagination(req);
+  const includeDeleted = req.query.includeDeleted === 'true' && req.user?.role === 'admin';
   
-  const total = (db.prepare("SELECT COUNT(*) as count FROM firefighters").get() as any).count;
-  const firefighters = db.prepare("SELECT * FROM firefighters LIMIT ? OFFSET ?").all(limit, offset);
+  const whereClause = includeDeleted ? "" : "WHERE status != 'deleted'";
+  const total = (db.prepare(`SELECT COUNT(*) as count FROM firefighters ${whereClause}`).get() as any).count;
+  const firefighters = db.prepare(`SELECT * FROM firefighters ${whereClause} LIMIT ? OFFSET ?`).all(limit, offset);
   
   res.json(formatPaginatedResponse(firefighters, total, { page, limit, offset }));
 });
@@ -133,6 +135,27 @@ router.post("/:id/cursos", authenticateToken, requirePermission('habilitaciones'
   logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Habilitaciones', `Agregado curso ${data.nombreCurso} a bombero ID: ${req.params.id}`);
 
   res.json({ id, ...data });
+});
+
+router.delete("/:id", authenticateToken, requirePermission('personnel'), (req: AuthRequest, res) => {
+  const firefighter = db.prepare("SELECT * FROM firefighters WHERE id = ?").get(req.params.id) as any;
+  if (!firefighter) return res.status(404).json({ error: "Bombero no encontrado" });
+
+  // Check if assigned to an active mission (salida)
+  const activeMission = db.prepare(`
+    SELECT id FROM salidas 
+    WHERE estado = 'en_curso' AND tripulacion LIKE ?
+  `).get(`%${req.params.id}%`);
+
+  if (activeMission) {
+    return res.status(400).json({ error: "No se puede dar de baja a un bombero asignado a una salida activa" });
+  }
+
+  db.prepare("UPDATE firefighters SET status = 'deleted' WHERE id = ?").run(req.params.id);
+  
+  logAction(req.user!.id, req.user!.displayName, 'DELETE', 'Firefighters', `Bombero dado de baja: ${firefighter.firstName} ${firefighter.lastName} (ID: ${req.params.id})`);
+
+  res.json({ success: true, message: "Bombero dado de baja del sistema" });
 });
 
 export default router;

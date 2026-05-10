@@ -1,6 +1,6 @@
 {
   "name": "CUARTEL BOMBEROS VOLUNTARIOS DE CHIMPAY",
-  "description": "Sistema de Comando Central para Bomberos de Chimpay - Gestión de Incidencias, Flota, Personal, Inventario, Reportes, Subsidios (Ley 25.054) y Mapa de Hidrantes.",
+  "description": "Sistema de gestión integral BomChimpay v2 para el cuartel de bomberos. Incluye gestión de incidentes, flota con mantenimiento, legajos de personal, inventario, finanzas, alquiler de cancha con seña, auditoría completa y notificaciones en tiempo real.",
   "requestFramePermissions": [
     "geolocation"
   ],

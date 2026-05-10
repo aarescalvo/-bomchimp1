@@ -23,7 +23,11 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function Personnel() {
   const [personnel, setPersonnel] = useState<Firefighter[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const { profile } = useAuth();
+
   const [showModal, setShowModal] = useState(false);
   const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -45,7 +49,12 @@ export default function Personnel() {
 
   const loadPersonnel = async () => {
     try {
-      const data = await apiFetch('/api/firefighters');
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (includeDeleted) params.append('includeDeleted', 'true');
+      
+      const data = await apiFetch(`/api/firefighters?${params.toString()}`);
       setPersonnel(data);
     } catch (err) {
       console.error(err);
@@ -53,8 +62,19 @@ export default function Personnel() {
   };
 
   useEffect(() => {
-    loadPersonnel();
-  }, []);
+    const timer = setTimeout(loadPersonnel, 300);
+    return () => clearTimeout(timer);
+  }, [search, statusFilter, includeDeleted]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Está seguro de dar de baja a este miembro?')) return;
+    try {
+      await apiFetch(`/api/firefighters/${id}`, { method: 'DELETE' });
+      loadPersonnel();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,16 +161,40 @@ export default function Personnel() {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center gap-4">
-          <div className="relative flex-1">
+        <div className="p-6 border-b border-slate-100 flex flex-wrap items-center gap-4 bg-slate-50/30">
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input 
               type="text" 
               placeholder="Buscar por nombre o DNI..."
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-red-600/10 placeholder:text-slate-400 text-sm outline-none transition-all"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-red-600/5 focus:border-red-600 outline-none transition-all placeholder:text-slate-400 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl font-bold text-slate-700 dark:text-gray-300 outline-none focus:ring-4 focus:ring-red-600/5 focus:border-red-600 text-sm"
+            >
+              <option value="active">Solo Activos</option>
+              <option value="inactive">Solo Bajas</option>
+              <option value="all">Todos los estados</option>
+            </select>
+
+            {profile?.role === 'admin' && (
+              <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl">
+                <input 
+                  type="checkbox" 
+                  checked={includeDeleted} 
+                  onChange={e => setIncludeDeleted(e.target.checked)}
+                  className="w-4 h-4 accent-red-600 rounded"
+                />
+                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Incluir Eliminados</span>
+              </label>
+            )}
           </div>
         </div>
 
@@ -166,15 +210,21 @@ export default function Personnel() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+              {personnel.map((p) => (
+                <tr key={p.id} className={cn(
+                  "hover:bg-slate-50/50 transition-colors group",
+                  p.status === 'deleted' && "opacity-50 grayscale bg-red-50/10"
+                )}>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center font-black text-slate-900 text-xs uppercase">
+                      <div className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-slate-200 dark:border-gray-700 flex items-center justify-center font-black text-slate-900 dark:text-white text-xs uppercase">
                         {p.firstName[0]}{p.lastName[0]}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{p.firstName} {p.lastName}</p>
+                        <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                          {p.firstName} {p.lastName}
+                          {p.status === 'deleted' && <span className="bg-red-100 text-red-600 text-[8px] px-1.5 py-0.5 rounded-full ring-1 ring-red-200">ELIMINADO</span>}
+                        </div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso: {p.joinDate}</p>
                       </div>
                     </div>
@@ -196,20 +246,34 @@ export default function Personnel() {
                   <td className="px-6 py-5">
                     <span className={cn(
                       "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
-                      p.status === 'active' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-100"
+                      p.status === 'active' ? "bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-800/20" : 
+                      p.status === 'inactive' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                      "bg-red-50 text-red-600 border border-red-100"
                     )}>
-                      {p.status === 'active' ? 'Activo' : 'Baja'}
+                      {p.status === 'active' ? 'Activo' : p.status === 'inactive' ? 'Baja' : 'Eliminado'}
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleEdit(p)}
-                        className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-red-600 transition-all">
+                      {p.status !== 'deleted' && (
+                        <>
+                          <button 
+                            onClick={() => handleEdit(p)}
+                            className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-gray-700 text-slate-400 hover:text-blue-600 transition-all"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(p.id)}
+                            className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-gray-700 text-slate-400 hover:text-red-600 transition-all"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      <button className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-gray-700 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
                         <History className="w-4 h-4" />
                       </button>
                     </div>
@@ -218,7 +282,7 @@ export default function Personnel() {
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && (
+          {personnel.length === 0 && (
             <div className="p-20 text-center">
               <UserCheck className="w-12 h-12 text-slate-200 mx-auto mb-4" />
               <p className="text-sm font-bold text-slate-400 uppercase tracking-[.2em]">No se encontró personal</p>

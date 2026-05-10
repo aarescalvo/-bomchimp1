@@ -13,12 +13,16 @@ import {
   Eye, 
   Fingerprint,
   Lock,
+  User,
   ChevronRight,
   Database,
   Palette
 } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+
+import { ChangePasswordForm } from '../components/profile/ChangePasswordForm';
+import { useAuth } from '../components/AuthProvider';
 
 const ALL_PERMISSIONS: { id: AppPermission; name: string; desc: string }[] = [
   { id: 'dashboard', name: 'Dashboard', desc: 'Vista principal y estadísticas' },
@@ -37,7 +41,7 @@ const ALL_PERMISSIONS: { id: AppPermission; name: string; desc: string }[] = [
 ];
 
 export default function Settings() {
-  const [tab, setTab] = useState<'users' | 'audit' | 'ui'>('users');
+  const [tab, setTab] = useState<'users' | 'audit' | 'ui' | 'profile'>('profile');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -104,7 +108,16 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="flex gap-4 p-1.5 bg-white border border-slate-200 rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-4 p-1.5 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl w-fit">
+        <button 
+          onClick={() => setTab('profile')}
+          className={cn(
+            "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+            tab === 'profile' ? "bg-slate-900 dark:bg-red-600 text-white shadow-xl" : "text-slate-400 hover:text-slate-600"
+          )}
+        >
+          <User className="w-4 h-4 inline-block mr-2" /> Mi Perfil
+        </button>
         <button 
           onClick={() => setTab('users')}
           className={cn(
@@ -134,7 +147,43 @@ export default function Settings() {
         </button>
       </div>
 
-      {tab === 'users' ? (
+      {tab === 'profile' ? (
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-slate-200 dark:border-gray-800 shadow-sm">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2">
+              <User className="w-6 h-6 text-red-600" /> Información de Usuario
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-gray-800 rounded-[24px]">
+                <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white text-2xl font-black">
+                  {profile?.displayName?.[0]}
+                </div>
+                <div>
+                   <p className="text-lg font-black text-slate-900 dark:text-white uppercase leading-none">{profile?.displayName}</p>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile?.role}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 border border-slate-100 dark:border-gray-800 rounded-2xl">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ID Usuario</p>
+                  <p className="font-bold text-slate-900 dark:text-white">{profile?.username}</p>
+                </div>
+                <div className="p-4 border border-slate-100 dark:border-gray-800 rounded-2xl">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Empresa/Cuartel</p>
+                  <p className="font-bold text-slate-900 dark:text-white">Chimpay</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-[40px] border border-slate-200 dark:border-gray-800 shadow-sm">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2">
+              <Lock className="w-6 h-6 text-red-600" /> Seguridad
+            </h2>
+            <ChangePasswordForm />
+          </div>
+        </div>
+      ) : tab === 'users' ? (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">

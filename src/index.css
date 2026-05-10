@@ -9,14 +9,25 @@
 
 @layer base {
   :root {
-    --primary-fire: #ef4444;
-    --app-radius: 32px;
+    --color-brand: #DC2626;
+    --color-brand-hover: #B91C1C;
+    --primary-fire: var(--color-brand);
+    --app-radius: 12px;
     --font-scale: 1.0;
   }
 
+  .dark {
+    --color-brand: #EF4444;
+    --color-brand-hover: #DC2626;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-slate-50 text-slate-900 transition-colors duration-200;
     font-size: calc(1rem * var(--font-scale));
+  }
+
+  .dark body {
+    @apply bg-gray-950 text-gray-100;
   }
   
   /* Apply dynamic radius to common elements */

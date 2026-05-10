@@ -33,9 +33,11 @@ const VEHICLE_WHITELIST = [
 
 router.get("/", authenticateToken, requirePermission('fleet'), (req, res) => {
   const { page, limit, offset } = getPagination(req);
+  const includeDeleted = req.query.includeDeleted === 'true' && req.user?.role === 'admin';
   
-  const total = (db.prepare("SELECT COUNT(*) as count FROM vehicles").get() as any).count;
-  const vehicles = db.prepare("SELECT * FROM vehicles LIMIT ? OFFSET ?").all(limit, offset);
+  const whereClause = includeDeleted ? "" : "WHERE status != 'deleted'";
+  const total = (db.prepare(`SELECT COUNT(*) as count FROM vehicles ${whereClause}`).get() as any).count;
+  const vehicles = db.prepare(`SELECT * FROM vehicles ${whereClause} LIMIT ? OFFSET ?`).all(limit, offset);
   
   res.json(formatPaginatedResponse(vehicles, total, { page, limit, offset }));
 });
@@ -92,6 +94,21 @@ router.patch("/:id", authenticateToken, requirePermission('fleet'), (req: AuthRe
   logAction(req.user!.id, req.user!.displayName, 'UPDATE', 'Fleet', `Vehículo ID: ${req.params.id} actualizado. Campos: ${validKeys.join(", ")}`);
 
   res.json({ success: true });
+});
+
+router.delete("/:id", authenticateToken, requirePermission('fleet'), (req: AuthRequest, res) => {
+  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id) as any;
+  if (!vehicle) return res.status(404).json({ error: "Vehículo no encontrado" });
+
+  if (vehicle.status === 'en_servicio') {
+    return res.status(400).json({ error: "No se puede eliminar un vehículo que está actualmente en servicio" });
+  }
+
+  db.prepare("UPDATE vehicles SET status = 'deleted' WHERE id = ?").run(req.params.id);
+  
+  logAction(req.user!.id, req.user!.displayName, 'DELETE', 'Fleet', `Vehículo eliminado: ${vehicle.name} (${vehicle.plate}) (ID: ${req.params.id})`);
+
+  res.json({ success: true, message: "Vehículo eliminado del sistema" });
 });
 
 export default router;

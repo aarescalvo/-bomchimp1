@@ -50,13 +50,31 @@ router.get("/disponibilidad", authenticateToken, (req, res) => {
 });
 
 router.get("/turnos", authenticateToken, (req, res) => {
-  const { desde, hasta } = req.query;
-  let query = "SELECT * FROM turnos_cancha ";
+  const { desde, hasta, estado, clienteDni } = req.query;
+  const includeDeleted = req.query.includeDeleted === 'true' && req.user?.role === 'admin';
+  
+  let query = "SELECT * FROM turnos_cancha WHERE 1=1 ";
   let params: any[] = [];
+  
+  if (!includeDeleted) {
+    query += "AND estado != 'deleted' ";
+  }
+  
   if (desde && hasta) {
-    query += "WHERE fecha BETWEEN ? AND ? ";
+    query += "AND fecha BETWEEN ? AND ? ";
     params.push(desde, hasta);
   }
+  
+  if (estado) {
+    query += "AND estado = ? ";
+    params.push(estado);
+  }
+  
+  if (clienteDni) {
+    query += "AND clienteDni LIKE ? ";
+    params.push(`%${clienteDni}%`);
+  }
+  
   query += "ORDER BY fecha ASC, horaInicio ASC";
   res.json(db.prepare(query).all(...params));
 });
@@ -187,6 +205,24 @@ router.post("/tarifas", authenticateToken, requireAdmin, (req: AuthRequest, res)
     .run(id, result.data.nombre, result.data.precio, result.data.diaSemana, result.data.horaDesde, result.data.horaHasta);
   logAction(req.user!.id, req.user!.displayName, 'CREATE', 'Settings', `Nueva tarifa cancha: ${result.data.nombre}`);
   res.json({ id, ...result.data });
+});
+
+router.delete("/turnos/:id", authenticateToken, requirePermission('cancha'), (req: AuthRequest, res) => {
+  const turno = db.prepare("SELECT * FROM turnos_cancha WHERE id = ?").get(req.params.id) as any;
+  if (!turno) return res.status(404).json({ error: "Turno no encontrado" });
+
+  if (turno.estado === 'pagado') {
+    return res.status(400).json({ error: "No se puede eliminar un turno ya pagado. Usá cancelar." });
+  }
+
+  if (turno.estado !== 'reservado') {
+    // Optionally allow 'cancelado' -> 'deleted'? The prompt says "Solo permitir si el turno está en estado 'reservado'"
+    return res.status(400).json({ error: "Solo se pueden eliminar turnos en estado 'reservado'." });
+  }
+
+  db.prepare("UPDATE turnos_cancha SET estado = 'deleted' WHERE id = ?").run(req.params.id);
+  logAction(req.user!.id, req.user!.displayName, 'DELETE', 'Cancha', `Turno eliminado ID: ${req.params.id}`);
+  res.json({ success: true, message: "Turno eliminado correctamente" });
 });
 
 export default router;

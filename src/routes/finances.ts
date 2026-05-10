@@ -18,8 +18,38 @@ const financeSchema = z.object({
 
 router.get("/", authenticateToken, requirePermission('finances'), (req, res) => {
   const { page, limit, offset } = getPagination(req);
-  const total = (db.prepare("SELECT COUNT(*) as count FROM finances").get() as any).count;
-  const data = db.prepare("SELECT * FROM finances ORDER BY timestamp DESC LIMIT ? OFFSET ?").all(limit, offset);
+  const { desde, hasta, tipo, categoria } = req.query;
+
+  let query = "SELECT * FROM finances WHERE 1=1 ";
+  let countQuery = "SELECT COUNT(*) as count FROM finances WHERE 1=1 ";
+  const params: any[] = [];
+
+  if (desde) {
+    query += "AND date(timestamp) >= ? ";
+    countQuery += "AND date(timestamp) >= ? ";
+    params.push(desde);
+  }
+  if (hasta) {
+    query += "AND date(timestamp) <= ? ";
+    countQuery += "AND date(timestamp) <= ? ";
+    params.push(hasta);
+  }
+  if (tipo) {
+    query += "AND type = ? ";
+    countQuery += "AND type = ? ";
+    params.push(tipo);
+  }
+  if (categoria) {
+    query += "AND category = ? ";
+    countQuery += "AND category = ? ";
+    params.push(categoria);
+  }
+
+  query += "ORDER BY timestamp DESC LIMIT ? OFFSET ?";
+  
+  const total = (db.prepare(countQuery).get(...params) as any).count;
+  const data = db.prepare(query).all(...params, limit, offset);
+
   res.json(formatPaginatedResponse(data, total, { page, limit, offset }));
 });
 

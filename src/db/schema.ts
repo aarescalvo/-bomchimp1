@@ -133,6 +133,7 @@ export function initDb() {
       prioridad TEXT DEFAULT 'normal',
       userId TEXT,
       userName TEXT,
+      isRead INTEGER DEFAULT 0,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -152,7 +153,8 @@ export function initDb() {
       category TEXT,
       quantity INTEGER,
       unit TEXT,
-      minStock INTEGER
+      minStock INTEGER,
+      status TEXT DEFAULT 'active'
     );
 
     -- Finanzas

@@ -4,13 +4,11 @@ import {
   LayoutDashboard, 
   Boxes, 
   Users, 
-  Flame, 
   Calendar, 
   Trophy, 
   Wallet, 
   Menu, 
   X,
-  LogOut,
   Bell,
   ClipboardList,
   Truck,
@@ -19,165 +17,250 @@ import {
   ShieldAlert,
   BarChart3,
   HandCoins,
-  Droplets
+  Flame,
+  ChevronLeft,
+  ChevronRight,
+  ShieldHalf,
+  Activity,
+  Landmark,
+  UserCog,
+  Notebook,
+  Package,
+  Car
 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { useUiSettings } from './UiSettingsProvider';
+import { useNotifications } from '../hooks/useNotifications';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Header } from './layout/Header';
+
+interface NavItem {
+  name: string;
+  icon: any;
+  path: string;
+  perm?: string;
+  badge?: 'alertas' | 'guardia' | 'mantenimiento';
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile, logout } = useAuth();
-  const { labels } = useUiSettings();
+  const { profile } = useAuth();
+  const { identity } = useUiSettings();
+  const { counts } = useNotifications();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isCollapsed, setIsCollapsed] = React.useState(() => {
+    return localStorage.getItem('sidebarCollapsed') === 'true';
+  });
 
-  const navItems = [
-    { name: labels.dashboard || 'Dashboard', icon: LayoutDashboard, path: '/', perm: 'dashboard' },
-    { name: 'Libreta de Guardia', icon: ClipboardList, path: '/guardia', perm: 'guardia' },
-    { name: labels.incidents || 'Emergencias', icon: ShieldAlert, path: '/incidents', perm: 'incidents' },
-    { name: labels.fleet || 'Flota de Vehículos', icon: Truck, path: '/fleet', perm: 'fleet' },
-    { name: labels.personnel || 'Personal Bomberos', icon: UserCheck, path: '/personnel', perm: 'personnel' },
-    { name: labels.inventory || 'Depósito/Stock', icon: Boxes, path: '/inventory', perm: 'inventory' },
-    { name: 'Avisos y Alertas', icon: Bell, path: '/alerts', perm: 'alerts' },
-    { name: labels.rentals || 'Alquiler Cancha', icon: Trophy, path: '/rentals', perm: 'rentals' },
-    { name: labels.finances || 'Tesorería', icon: Wallet, path: '/finances', perm: 'finances' },
-    { name: labels.subsidies || 'Subsidios', icon: HandCoins, path: '/subsidies', perm: 'subsidies' },
-    { name: labels.reports || 'Reportes', icon: BarChart3, path: '/reports', perm: 'reports' },
-    { name: labels.settings || 'Ajustes Sistema', icon: SettingsIcon, path: '/settings', perm: 'settings' },
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', newState.toString());
+  };
+
+  const navGroups: NavGroup[] = [
+    {
+      label: 'GRUPO OPERATIVO',
+      items: [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/', perm: 'dashboard' },
+        { name: 'Guardia', icon: Notebook, path: '/guardia', perm: 'guardia', badge: 'guardia' },
+        { name: 'Despacho / Salidas', icon: Truck, path: '/salidas', perm: 'salidas' },
+        { name: 'Incidentes', icon: ShieldAlert, path: '/incidents', perm: 'incidents' },
+      ]
+    },
+    {
+      label: 'GRUPO RECURSOS',
+      items: [
+        { name: 'Personal', icon: UserCheck, path: '/personnel', perm: 'personnel' },
+        { name: 'Vehículos', icon: Car, path: '/fleet', perm: 'fleet', badge: 'mantenimiento' },
+        { name: 'Inventario', icon: Package, path: '/inventory', perm: 'inventory' },
+        { name: 'Agenda / Turnos', icon: Calendar, path: '/agenda', perm: 'agenda' },
+      ]
+    },
+    {
+      label: 'GRUPO ADMINISTRATIVO',
+      items: [
+        { name: 'Finanzas', icon: Wallet, path: '/finances', perm: 'finances' },
+        { name: 'Cancha', icon: ShieldHalf, path: '/rentals', perm: 'cancha' },
+        { name: 'Subsidios', icon: BuildingBank, path: '/subsidies', perm: 'subsidies' },
+        { name: 'Alertas', icon: Bell, path: '/alerts', perm: 'alerts', badge: 'alertas' },
+        { name: 'Reportes', icon: BarChart3, path: '/reports', perm: 'reports' },
+      ]
+    },
+    {
+      label: 'CONFIGURACIÓN',
+      items: [
+        { name: 'Usuarios', icon: UserCog, path: '/users', perm: 'admin' },
+        { name: 'Ajustes', icon: SettingsIcon, path: '/settings', perm: 'settings' },
+      ]
+    }
   ];
 
-  const filteredNav = navItems.filter(item => 
-    !item.perm || (profile?.permissions?.includes(item.perm as any))
-  );
+  const filterItems = (group: NavGroup) => {
+    return {
+      ...group,
+      items: group.items.filter(item => 
+        !item.perm || (profile?.permissions?.includes(item.perm as any) || profile?.role === 'admin')
+      )
+    };
+  };
 
-  return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-red-100 selection:text-red-900">
-      {/* TOP EMERGENCY BAR */}
-      <div className="bg-red-700 text-white px-6 py-2.5 flex justify-between items-center shadow-lg z-[60] border-b border-red-800">
-        <div className="flex items-center space-x-4">
-          <div className="relative flex items-center justify-center">
-            <div className="absolute w-3 h-3 bg-red-400 rounded-full animate-ping opacity-75"></div>
-            <div className="relative w-2.5 h-2.5 bg-red-400 rounded-full"></div>
+  const filteredGroups = navGroups.map(filterItems).filter(g => g.items.length > 0);
+
+  const getBadgeValue = (type?: string) => {
+    if (!type) return 0;
+    return (counts as any)[type] || 0;
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-slate-900 text-slate-300">
+      {/* Sidebar Header */}
+      <div className={cn(
+        "p-6 flex flex-col items-center border-b border-slate-800 transition-all",
+        isCollapsed ? "p-4" : "p-6"
+      )}>
+        <div className={cn(
+          "bg-white rounded-lg shadow-xl ring-2 ring-red-600/20 overflow-hidden transition-all duration-300",
+          isCollapsed ? "w-10 h-10 p-1" : "w-20 h-20 p-2 mb-3"
+        )}>
+          {identity.logo ? (
+            <img 
+              src={identity.logo} 
+              alt="Logo" 
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-red-600 text-white">
+              <ShieldHalf className={cn(isCollapsed ? "w-6 h-6" : "w-12 h-12")} />
+            </div>
+          )}
+        </div>
+        {!isCollapsed && (
+          <div className="text-center">
+            <h1 className="text-white font-black tracking-tighter text-[11px] leading-tight uppercase">
+              {identity.nombre}
+            </h1>
+            <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">
+              {identity.ciudad}
+            </p>
           </div>
-          <span className="font-bold tracking-widest text-[10px] uppercase">OPERATIVIDAD: 100% — CUARTEL CHIMPAY</span>
-          <span className="hidden sm:inline-block bg-red-900/40 px-2 py-0.5 rounded text-[9px] font-black border border-red-500/50 uppercase tracking-tighter">ESTACIÓN CENTRAL</span>
-        </div>
-        <div className="hidden lg:flex items-center space-x-6 text-[10px] font-bold uppercase tracking-widest opacity-80">
-          <span className="flex items-center gap-2"><Bell className="w-3 h-3" /> Sin Alertas Pendientes</span>
-        </div>
+        )}
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col border-r border-slate-800 sticky top-0 h-[calc(100vh-44px)]">
-          <div className="p-6">
-            <div className="flex flex-col items-center mb-8 text-center">
-              <div className="w-20 h-20 bg-white p-1 rounded-full shadow-2xl mb-3 ring-4 ring-red-600/20">
-                <img 
-                  src="https://files.aistudio.google.com/ais-dev-efig3ahtdr3uqmljqvdvfs-637731406593.us-east1.run.app/api/artifacts/attached_image_318df857_3840_4639_8673_093952fdfd88" 
-                  alt="Logo" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <h1 className="text-white font-black tracking-tighter text-[11px] leading-tight uppercase">
-                Cuartel Bomberos<br/>Voluntarios de Chimpay
-              </h1>
-            </div>
-            
-            <nav className="space-y-1">
-              {filteredNav.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-bold group",
-                    location.pathname === item.path 
-                      ? "bg-slate-800 text-white shadow-sm ring-1 ring-white/5" 
-                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                  )}
-                >
-                  <item.icon className={cn("w-4 h-4", location.pathname === item.path ? "text-red-500" : "text-slate-500")} />
-                  <span className="tracking-tight">{item.name}</span>
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          <div className="mt-auto p-6 border-t border-slate-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-xs font-black border border-white/5 ring-4 ring-slate-900 shadow-xl">
-                {profile?.displayName?.[0] || 'B'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate leading-tight">{profile?.displayName}</p>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{profile?.role}</p>
-              </div>
-              <button 
-                onClick={logout}
-                className="text-slate-600 hover:text-red-400 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* Mobile Nav */}
-        <div className="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between sticky top-0 z-50">
-          <div className="flex items-center gap-3">
-            <img 
-              src="https://files.aistudio.google.com/ais-dev-efig3ahtdr3uqmljqvdvfs-637731406593.us-east1.run.app/api/artifacts/attached_image_318df857_3840_4639_8673_093952fdfd88" 
-              alt="Logo" 
-              className="w-8 h-8 rounded-full bg-white p-0.5"
-              referrerPolicy="no-referrer"
-            />
-            <span className="font-black uppercase tracking-tighter text-xs">CHIMPAY BOMBEROS</span>
-          </div>
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            {isMobileMenuOpen ? <X /> : <Menu />}
-          </button>
-        </div>
-
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="md:hidden absolute top-[92px] left-0 right-0 bg-slate-900 text-white z-40 border-t border-slate-800 p-4 shadow-2xl"
-            >
-              <nav className="space-y-1">
-                {filteredNav.map((item) => (
+      {/* Navigation Groups */}
+      <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-slate-700">
+        {filteredGroups.map((group, idx) => (
+          <div key={idx} className="mb-6 last:mb-0">
+            {!isCollapsed && (
+              <p className="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-3">
+                {group.label}
+              </p>
+            )}
+            <nav className="space-y-0.5 px-3">
+              {group.items.map((item) => {
+                const badgeCount = getBadgeValue(item.badge);
+                const isActive = location.pathname === item.path;
+                
+                return (
                   <Link
                     key={item.path}
                     to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    title={isCollapsed ? item.name : undefined}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-lg font-bold text-sm",
-                      location.pathname === item.path ? "bg-red-600 text-white" : "text-slate-400"
+                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-bold group relative",
+                      isActive 
+                        ? "bg-[var(--color-brand)] text-white shadow-lg shadow-red-900/20" 
+                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
                     )}
                   >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.name}</span>
+                    <item.icon className={cn(
+                      "w-4 h-4 flex-shrink-0 transition-colors",
+                      isActive ? "text-white" : "text-slate-500 group-hover:text-red-400"
+                    )} />
+                    {!isCollapsed && <span className="truncate">{item.name}</span>}
+                    
+                    {badgeCount > 0 && (
+                      <span className={cn(
+                        "flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1",
+                        item.badge === 'guardia' ? "bg-amber-500 text-white" : "bg-red-600 text-white",
+                        isCollapsed ? "absolute top-1 right-1 border-2 border-slate-900" : "ml-auto"
+                      )}>
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </span>
+                    )}
                   </Link>
-                ))}
-                <button 
-                  onClick={logout}
-                  className="w-full flex items-center gap-3 px-3 py-3 text-red-500 font-bold text-sm border-t border-slate-800 mt-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Cerrar Sesión</span>
-                </button>
-              </nav>
-            </motion.div>
+                );
+              })}
+            </nav>
+            {!isCollapsed && <div className="mx-6 mt-4 border-t border-slate-800/40" />}
+          </div>
+        ))}
+      </div>
+
+      {/* Sidebar Toggle Button */}
+      <button 
+        onClick={toggleSidebar}
+        className="h-12 border-t border-slate-800 flex items-center justify-center text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+      >
+        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-100 dark:bg-gray-950 flex font-sans selection:bg-red-100 dark:selection:bg-red-900/30 selection:text-red-900 transition-colors">
+      {/* Sidebar - Desktop */}
+      <aside 
+        className={cn(
+          "hidden md:flex flex-col bg-slate-900 text-slate-300 border-r border-slate-800 transition-all duration-300 sticky top-0 h-screen",
+          isCollapsed ? "w-16" : "w-60"
+        )}
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
+
+        {/* Mobile Sidebar Overlay */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[100] md:hidden"
+              />
+              <motion.aside
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed top-0 bottom-0 left-0 w-72 bg-slate-900 z-[101] md:hidden shadow-2xl"
+              >
+                <div className="absolute top-4 right-4 text-slate-400">
+                  <button onClick={() => setIsMobileMenuOpen(false)}><X className="w-6 h-6" /></button>
+                </div>
+                <div className="h-full overflow-y-auto">
+                  <SidebarContent />
+                </div>
+              </motion.aside>
+            </>
           )}
         </AnimatePresence>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6 md:p-10 overflow-y-auto bg-slate-100">
-          <div className="max-w-7xl mx-auto space-y-10">
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-gray-950 transition-colors">
+          <div className="p-6 md:p-8 max-w-7xl mx-auto min-h-full">
             {children}
           </div>
         </main>

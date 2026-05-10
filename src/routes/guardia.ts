@@ -21,20 +21,42 @@ const guardiaLogSchema = z.object({
 
 router.get("/", authenticateToken, requirePermission('guardia'), (req, res) => {
   const { page, limit, offset } = getPagination(req);
-  const { fecha } = req.query;
+  const { desde, hasta, tipo, prioridad, turno } = req.query;
 
-  let query = "SELECT * FROM guardia_logs ";
-  let countQuery = "SELECT COUNT(*) as count FROM guardia_logs ";
+  let query = "SELECT * FROM guardia_logs WHERE 1=1 ";
+  let countQuery = "SELECT COUNT(*) as count FROM guardia_logs WHERE 1=1 ";
   const params: any[] = [];
 
-  if (fecha) {
-    query += "WHERE fecha = ? ";
-    countQuery += "WHERE fecha = ? ";
-    params.push(fecha);
-  } else {
-    // Default last 30 days
-    query += "WHERE fecha >= date('now', '-30 days') ";
-    countQuery += "WHERE fecha >= date('now', '-30 days') ";
+  if (desde) {
+    query += "AND fecha >= ? ";
+    countQuery += "AND fecha >= ? ";
+    params.push(desde);
+  }
+  if (hasta) {
+    query += "AND fecha <= ? ";
+    countQuery += "AND fecha <= ? ";
+    params.push(hasta);
+  }
+  if (tipo) {
+    query += "AND tipo = ? ";
+    countQuery += "AND tipo = ? ";
+    params.push(tipo);
+  }
+  if (prioridad) {
+    query += "AND prioridad = ? ";
+    countQuery += "AND prioridad = ? ";
+    params.push(prioridad);
+  }
+  if (turno) {
+    query += "AND turno = ? ";
+    countQuery += "AND turno = ? ";
+    params.push(turno);
+  }
+
+  // If no filters provided, default to last 30 days
+  if (!desde && !hasta && !tipo && !prioridad && !turno) {
+    query += "AND fecha >= date('now', '-30 days') ";
+    countQuery += "AND fecha >= date('now', '-30 days') ";
   }
 
   query += "ORDER BY timestamp DESC LIMIT ? OFFSET ?";
@@ -106,6 +128,12 @@ router.patch("/:id", authenticateToken, requirePermission('guardia'), (req: Auth
   logAction(req.user!.id, req.user!.displayName, "UPDATE", "Guardia", `Modificada novedad guardia ID: ${req.params.id}`);
 
   res.json({ success: true });
+});
+
+router.patch("/:id/read", authenticateToken, requirePermission('guardia'), (req, res) => {
+  const { id } = req.params;
+  db.prepare("UPDATE guardia_logs SET isRead = 1 WHERE id = ?").run(id);
+  res.status(204).send();
 });
 
 export default router;

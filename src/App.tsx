@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './components/AuthProvider';
 import { UiSettingsProvider } from './components/UiSettingsProvider';
 import { AppLayout } from './components/AppLayout';
 import { Flame, LogIn } from 'lucide-react';
+import { Toaster } from 'sonner';
 import Home from './views/Home';
 import Incidents from './views/Incidents';
 import Inventory from './views/Inventory';
@@ -209,6 +210,7 @@ export default function App() {
   return (
     <UiSettingsProvider>
       <AuthProvider>
+        <Toaster position="bottom-right" richColors />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />

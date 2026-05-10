@@ -81,4 +81,46 @@ function calculateAlert(entidadId: string, tipo: string, entidad: string, nombre
   };
 }
 
+router.get("/counts", authenticateToken, (req, res) => {
+  // 1. Alertas Críticas (Vencidas o < 30 días)
+  // Reusing calculateAlert logic for counts
+  const allAlerts: any[] = [];
+  
+  // Reuse code from /vencimientos to get allAlerts (I should refactor but for simplicity...)
+  const firefighters = db.prepare("SELECT licenseExpiration, medicalExpiration FROM firefighters WHERE status = 'active'").all() as any[];
+  firefighters.forEach(f => {
+    if (f.licenseExpiration) allAlerts.push(calculateAlert('', 'licencia', '', '', f.licenseExpiration));
+    if (f.medicalExpiration) allAlerts.push(calculateAlert('', 'médica', '', '', f.medicalExpiration));
+  });
+  const vehicles = db.prepare("SELECT insuranceExpiration, vtvExpiration, nextMaintenance FROM vehicles WHERE status != 'out_of_service'").all() as any[];
+  vehicles.forEach(v => {
+    if (v.vtvExpiration) allAlerts.push(calculateAlert('', 'vtv', '', '', v.vtvExpiration));
+    if (v.insuranceExpiration) allAlerts.push(calculateAlert('', 'seguro', '', '', v.insuranceExpiration));
+    if (v.nextMaintenance) allAlerts.push(calculateAlert('', 'mantenimiento', '', '', v.nextMaintenance));
+  });
+
+  const alertsCount = allAlerts.filter(a => a.estado === 'vencido' || a.estado === 'critico').length;
+
+  // 2. Guardia (Urgentes últimas 24h no leídas)
+  const guardiaCount = (db.prepare(`
+    SELECT COUNT(*) as count FROM guardia_logs 
+    WHERE prioridad = 'urgente' 
+    AND isRead = 0 
+    AND timestamp >= datetime('now', '-24 hours')
+  `).get() as any).count;
+
+  // 3. Mantenimiento (Vehículos con mantenimiento vencido)
+  const maintenanceCount = (db.prepare(`
+    SELECT COUNT(*) as count FROM vehicles 
+    WHERE nextMaintenance < date('now') 
+    AND status != 'out_of_service'
+  `).get() as any).count;
+
+  res.json({
+    alertas: alertsCount,
+    guardia: guardiaCount,
+    mantenimiento: maintenanceCount
+  });
+});
+
 export default router;

@@ -26,25 +26,36 @@ const salidaSchema = z.object({
 
 router.get("/", authenticateToken, requirePermission('salidas'), (req, res) => {
   const { page, limit, offset } = getPagination(req);
-  const { estado, fecha } = req.query;
+  const { desde, hasta, estado, vehiculoId, tipoServicio } = req.query;
 
-  let query = "SELECT * FROM salidas ";
-  let countQuery = "SELECT COUNT(*) as count FROM salidas ";
+  let query = "SELECT * FROM salidas WHERE 1=1 ";
+  let countQuery = "SELECT COUNT(*) as count FROM salidas WHERE 1=1 ";
   const params: any[] = [];
-  const filters: string[] = [];
 
   if (estado) {
-    filters.push("estado = ?");
+    query += "AND estado = ? ";
+    countQuery += "AND estado = ? ";
     params.push(estado);
   }
-  if (fecha) {
-    filters.push("date(horaDespacho) = ?");
-    params.push(fecha);
+  if (desde) {
+    query += "AND date(horaDespacho) >= ? ";
+    countQuery += "AND date(horaDespacho) >= ? ";
+    params.push(desde);
   }
-
-  if (filters.length > 0) {
-    query += "WHERE " + filters.join(" AND ") + " ";
-    countQuery += "WHERE " + filters.join(" AND ") + " ";
+  if (hasta) {
+    query += "AND date(horaDespacho) <= ? ";
+    countQuery += "AND date(horaDespacho) <= ? ";
+    params.push(hasta);
+  }
+  if (vehiculoId) {
+    query += "AND vehiculoId = ? ";
+    countQuery += "AND vehiculoId = ? ";
+    params.push(vehiculoId);
+  }
+  if (tipoServicio) {
+    query += "AND tipoServicio = ? ";
+    countQuery += "AND tipoServicio = ? ";
+    params.push(tipoServicio);
   }
 
   query += "ORDER BY horaDespacho DESC LIMIT ? OFFSET ?";

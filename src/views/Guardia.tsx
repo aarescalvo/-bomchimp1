@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '../lib/utils';
 
 interface GuardiaLog {
   id: string;
@@ -39,9 +40,21 @@ export default function Guardia() {
   const [novedad, setNovedad] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [filters, setFilters] = useState({
+    desde: '',
+    hasta: '',
+    tipo: '',
+    prioridad: '',
+    turno: ''
+  });
+
   const fetchLogs = async () => {
     try {
-      const response = await apiFetch('/api/guardia');
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, val]) => {
+        if (val) params.append(key, val);
+      });
+      const response = await apiFetch(`/api/guardia?${params.toString()}`);
       setLogs(response.data);
     } catch (err) {
       console.error(err);
@@ -52,7 +65,16 @@ export default function Guardia() {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [filters]);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await apiFetch(`/api/guardia/${id}/read`, { method: 'PATCH' });
+      setLogs(prev => prev.map(log => log.id === id ? { ...log, isRead: 1 } : log));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,10 +125,36 @@ export default function Guardia() {
           </div>
           <button 
             onClick={() => setShowForm(!showForm)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${showForm ? 'bg-slate-100 text-slate-600' : 'bg-red-600 text-white shadow-lg shadow-red-600/30'}`}
+            className={cn(
+              "w-10 h-10 flex items-center justify-center rounded-xl transition-all",
+              showForm ? 'bg-slate-100 text-slate-600' : 'bg-red-600 text-white shadow-lg shadow-red-600/30'
+            )}
           >
             {showForm ? <Plus className="w-6 h-6 rotate-45" /> : <Plus className="w-6 h-6" />}
           </button>
+        </div>
+
+        {/* Filtros Rápidos */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
+           <select 
+             value={filters.tipo} 
+             onChange={e => setFilters({...filters, tipo: e.target.value})}
+             className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-tight text-slate-500 outline-none focus:border-red-500 whitespace-nowrap"
+           >
+             <option value="">Todos los Tipos</option>
+             <option value="operativa">Operativa</option>
+             <option value="administrativa">Adm.</option>
+             <option value="mantenimiento">Mant.</option>
+           </select>
+           <select 
+             value={filters.prioridad} 
+             onChange={e => setFilters({...filters, prioridad: e.target.value})}
+             className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-tight text-slate-500 outline-none focus:border-red-500"
+           >
+             <option value="">Prioridad</option>
+             <option value="normal">Normal</option>
+             <option value="urgente">Urgente</option>
+           </select>
         </div>
       </div>
 
@@ -178,15 +226,19 @@ export default function Guardia() {
           </div>
         ) : (
           logs.map((log) => (
-            <div key={log.id} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+            <div key={log.id} className={cn(
+               "bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border transition-all space-y-3",
+               log.prioridad === 'urgente' && !(log as any).isRead ? "border-red-500 ring-1 ring-red-500/20" : "border-slate-200 dark:border-gray-800"
+            )}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest ${
-                    log.prioridad === 'urgente' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
-                  }`}>
+                  <span className={cn(
+                    "px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest",
+                    log.prioridad === 'urgente' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600 dark:bg-gray-800 dark:text-gray-400'
+                  )}>
                     {log.prioridad}
                   </span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l border-slate-200 pl-2">
+                  <span className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest border-l border-slate-200 dark:border-gray-800 pl-2">
                     {log.tipo}
                   </span>
                 </div>
@@ -196,20 +248,31 @@ export default function Guardia() {
                 </div>
               </div>
               
-              <p className="text-sm font-medium text-slate-700 leading-relaxed">
+              <p className="text-sm font-medium text-slate-700 dark:text-gray-300 leading-relaxed">
                 {log.novedad}
               </p>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-3 border-t border-slate-100 dark:border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
+                  <div className="w-6 h-6 bg-slate-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-slate-500">
                     <User className="w-3 h-3" />
                   </div>
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{log.userName}</span>
+                  <span className="text-[9px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest">{log.userName}</span>
                 </div>
-                <button className="text-slate-300 hover:text-slate-600">
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  {log.prioridad === 'urgente' && !(log as any).isRead && (
+                    <button 
+                      onClick={() => handleMarkAsRead(log.id)}
+                      className="px-3 py-1 bg-red-600 text-white text-[9px] font-black uppercase rounded-lg shadow-lg shadow-red-600/20 active:scale-95 transition-all"
+                    >
+                      Leído
+                    </button>
+                  )}
+                  <button className="text-slate-300 hover:text-slate-600 dark:hover:text-gray-400">
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))

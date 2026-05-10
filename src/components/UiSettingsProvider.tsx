@@ -12,11 +12,22 @@ interface MenuLabels {
   [key: string]: string;
 }
 
+interface QuarterIdentity {
+  nombre: string;
+  ciudad: string;
+  numero: string;
+  logo: string | null;
+}
+
 interface UiSettingsContextType {
   theme: ThemeConfig;
+  identity: QuarterIdentity;
   labels: MenuLabels;
   updateTheme: (newTheme: Partial<ThemeConfig>) => Promise<void>;
   updateLabels: (newLabels: Partial<MenuLabels>) => Promise<void>;
+  updateIdentity: (newIdentity: Partial<QuarterIdentity>) => Promise<void>;
+  darkMode: boolean;
+  setDarkMode: (val: boolean) => void;
   loading: boolean;
 }
 
@@ -24,20 +35,49 @@ const UiSettingsContext = createContext<UiSettingsContextType | null>(null);
 
 export function UiSettingsProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemeConfig>({
-    primaryColor: '#ef4444',
-    borderRadius: '32px',
+    primaryColor: '#DC2626',
+    borderRadius: '12px',
     compactMode: false,
     fontScale: 1.0
   });
+  const [identity, setIdentity] = useState<QuarterIdentity>({
+    nombre: 'Bomberos Voluntarios de Chimpay',
+    ciudad: 'Chimpay',
+    numero: '',
+    logo: null
+  });
   const [labels, setLabels] = useState<MenuLabels>({});
   const [loading, setLoading] = useState(true);
+  const [darkMode, setDarkModeState] = useState(false);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const config = await apiFetch('/api/ui-settings');
+        const configArr = await apiFetch('/api/ui-settings');
+        // configArr is likely an array of {key, value} based on server side table
+        const config: any = {};
+        if (Array.isArray(configArr)) {
+          configArr.forEach(item => {
+            try {
+              config[item.key] = typeof item.value === 'string' && (item.value.startsWith('{') || item.value.startsWith('[')) 
+                ? JSON.parse(item.value) 
+                : item.value;
+            } catch {
+              config[item.key] = item.value;
+            }
+          });
+        }
+
         if (config.theme) setTheme(config.theme);
         if (config.menu_labels) setLabels(config.menu_labels);
+        
+        setIdentity({
+          nombre: config.cuartel_nombre || 'Bomberos Voluntarios de Chimpay',
+          ciudad: config.cuartel_ciudad || 'Chimpay',
+          numero: config.cuartel_numero || '',
+          logo: config.cuartel_logo || null
+        });
+
       } catch (err) {
         console.error("Error loading UI settings", err);
       } finally {
@@ -45,10 +85,25 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       }
     }
     loadSettings();
+
+    // Dark mode initial state
+    const savedDark = localStorage.getItem('darkMode') === 'true';
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialDark = savedDark !== null ? savedDark : prefersDark;
+    setDarkMode(initialDark);
   }, []);
 
+  const setDarkMode = (val: boolean) => {
+    setDarkModeState(val);
+    localStorage.setItem('darkMode', val.toString());
+    if (val) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
   useEffect(() => {
-    // Apply CSS variables to root
     const root = document.documentElement;
     root.style.setProperty('--primary-fire', theme.primaryColor);
     root.style.setProperty('--app-radius', theme.borderRadius);
@@ -60,7 +115,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
     setTheme(updated);
     await apiFetch('/api/ui-settings', {
       method: 'POST',
-      body: JSON.stringify({ key: 'theme', value: updated })
+      body: JSON.stringify({ key: 'theme', value: JSON.stringify(updated) })
     });
   };
 
@@ -69,12 +124,29 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
     setLabels(updated);
     await apiFetch('/api/ui-settings', {
       method: 'POST',
-      body: JSON.stringify({ key: 'menu_labels', value: updated })
+      body: JSON.stringify({ key: 'menu_labels', value: JSON.stringify(updated) })
     });
   };
 
+  const updateIdentity = async (newIdentity: Partial<QuarterIdentity>) => {
+    const updated = { ...identity, ...newIdentity };
+    setIdentity(updated);
+    
+    // Save each key individually to the DB
+    const promises = Object.entries(newIdentity).map(([key, value]) => {
+      return apiFetch('/api/ui-settings', {
+        method: 'POST',
+        body: JSON.stringify({ key: `cuartel_${key}`, value })
+      });
+    });
+    await Promise.all(promises);
+  };
+
   return (
-    <UiSettingsContext.Provider value={{ theme, labels, updateTheme, updateLabels, loading }}>
+    <UiSettingsContext.Provider value={{ 
+      theme, identity, labels, updateTheme, updateLabels, updateIdentity, 
+      darkMode, setDarkMode, loading 
+    }}>
       {children}
     </UiSettingsContext.Provider>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Vehicle, VehicleTool, MaintenanceLog } from '../types';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../components/AuthProvider';
 import { 
   Truck, 
   Plus, 
@@ -45,10 +46,18 @@ export default function Fleet() {
     nextHydrostatic: ''
   });
 
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'all'>('active');
+  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const { profile } = useAuth();
+
   const loadVehicles = async () => {
     try {
+      const params = new URLSearchParams();
+      if (activeTab !== 'all') params.append('status', activeTab);
+      if (includeDeleted) params.append('includeDeleted', 'true');
+      
       const [vData, sData] = await Promise.all([
-        apiFetch('/api/vehicles'),
+        apiFetch(`/api/vehicles?${params.toString()}`),
         apiFetch('/api/scuba')
       ]);
       setVehicles(vData);
@@ -60,7 +69,19 @@ export default function Fleet() {
 
   useEffect(() => {
     loadVehicles();
-  }, []);
+  }, [activeTab, includeDeleted]);
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('¿Está seguro de eliminar esta unidad?')) return;
+    try {
+      await apiFetch(`/api/vehicles/${id}`, { method: 'DELETE' });
+      loadVehicles();
+      if (selectedVehicle?.id === id) setSelectedVehicle(null);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   const loadVehicleDetails = async (v: Vehicle) => {
     try {
@@ -95,16 +116,44 @@ export default function Fleet() {
       {/* List of Vehicles */}
       <div className="lg:col-span-4 space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter flex items-center gap-2">
             <Truck className="w-6 h-6 text-red-600" />
             Flota Operativa
           </h2>
           <button 
             onClick={() => { setModalType('vehicle'); setShowModal(true); }}
-            className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm"
+            className="p-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl hover:bg-slate-50 transition-all shadow-sm"
           >
             <Plus className="w-5 h-5 text-red-600" />
           </button>
+        </div>
+
+        <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl p-4 space-y-4">
+           <div className="flex gap-2">
+             {['active', 'inactive', 'all'].map((t) => (
+               <button 
+                key={t}
+                onClick={() => setActiveTab(t as any)}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                  activeTab === t ? "bg-slate-900 dark:bg-red-600 text-white" : "bg-slate-50 dark:bg-gray-800 text-slate-400"
+                )}
+               >
+                 {t === 'active' ? 'En Servicio' : t === 'inactive' ? 'Fuera Serv.' : 'Todos'}
+               </button>
+             ))}
+           </div>
+           {profile?.role === 'admin' && (
+             <label className="flex items-center gap-2 cursor-pointer select-none px-2">
+                <input 
+                  type="checkbox" 
+                  checked={includeDeleted} 
+                  onChange={e => setIncludeDeleted(e.target.checked)}
+                  className="w-4 h-4 accent-red-600 rounded"
+                />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Incluir Eliminados</span>
+             </label>
+           )}
         </div>
 
         <div className="space-y-4">
@@ -115,31 +164,45 @@ export default function Fleet() {
               className={cn(
                 "w-full text-left p-5 rounded-3xl border transition-all relative group overflow-hidden",
                 selectedVehicle?.id === v.id 
-                  ? "bg-white border-red-600/30 shadow-xl shadow-red-600/5 ring-1 ring-red-600/10" 
-                  : "bg-white border-slate-200 hover:border-slate-300"
+                  ? "bg-white dark:bg-gray-800 border-red-600/30 shadow-xl shadow-red-600/5 ring-1 ring-red-600/10" 
+                  : "bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-800 hover:border-slate-300 dark:hover:border-gray-700",
+                v.status === 'deleted' && "opacity-50 grayscale"
               )}
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">{v.type}</p>
-                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{v.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">{v.type}</p>
+                    {v.status === 'deleted' && <span className="bg-red-100 text-red-600 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase">ELIMINADO</span>}
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{v.name}</h3>
                   <p className="text-xs font-bold text-slate-400 font-mono mt-0.5">{v.plate}</p>
                 </div>
                 <div className={cn(
-                  "px-2 py-1 round-lg text-[8px] font-black uppercase tracking-widest",
-                  v.status === 'available' ? "text-emerald-500" : "text-amber-500"
+                  "px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest",
+                  v.status === 'available' ? "text-emerald-500" : v.status === 'active' ? "text-red-500" : "text-amber-500"
                 )}>
-                  {v.status === 'available' ? '• Disponible' : '• Ocupado'}
+                  {v.status === 'available' ? '• Disponible' : v.status === 'deleted' ? '• Eliminado' : '• Ocupado'}
                 </div>
               </div>
               
-              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400">
                   <div className="flex items-center gap-1.5 uppercase">
                     <Calendar className="w-3 h-3" /> {v.year}
                   </div>
                 </div>
-                <ChevronRight className={cn("w-4 h-4 transition-transform", selectedVehicle?.id === v.id ? "rotate-90 text-red-600" : "text-slate-300")} />
+                <div className="flex items-center gap-2">
+                  {profile?.role === 'admin' && v.status !== 'deleted' && (
+                    <button 
+                      onClick={(e) => handleDelete(v.id, e)}
+                      className="p-1.5 bg-slate-50 dark:bg-gray-800 rounded-lg text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <ChevronRight className={cn("w-4 h-4 transition-transform", selectedVehicle?.id === v.id ? "rotate-90 text-red-600" : "text-slate-300")} />
+                </div>
               </div>
             </button>
           ))}
