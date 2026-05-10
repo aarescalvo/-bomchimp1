@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import rentalsRouter from '../routes/rentals';
+import rentalsRouter from '../server/routes/rentals';
 
 // Mock DB
 vi.mock('../db/schema', () => ({

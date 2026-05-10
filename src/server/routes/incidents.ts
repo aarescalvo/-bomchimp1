@@ -4,20 +4,9 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { logAction } from '../utils/logger';
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { incidentSchema } from '../schemas/incidents';
 
 const router = Router();
-
-const incidentSchema = z.object({
-  type: z.string().min(1),
-  severity: z.string().optional(),
-  address: z.string().min(1),
-  callerName: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  description: z.string().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional()
-});
 
 router.get("/", authenticateToken, (req, res) => {
   const incidents = db.prepare("SELECT * FROM incidents ORDER BY timestamp DESC").all();

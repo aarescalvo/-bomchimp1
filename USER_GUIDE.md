@@ -1,29 +1,28 @@
-# Manual de Operación - Gestión Bomberil
+# Manual de Operación - Sistema de Gestión Bomberil
 
-Este manual explica cómo utilizar los módulos principales del sistema.
+Este manual explica cómo utilizar los módulos críticos para el día a día en el cuartel.
 
-## 1. Gestión de Emergencias (Incidencias)
-*   **Carga:** Haz clic en "Nueva Emergencia". Completa el tipo de siniestro y la ubicación.
-*   **Estado:** Cambia el estado a "Despachado" o "Finalizado".
-*   **WhatsApp:** Al crear una emergencia, usa el botón de "Notificar" para enviar los datos (Dirección y Tipo) automáticamente al grupo del cuerpo activo.
+## 🚒 1. Emergencias e Incidencias
+- **Registro:** Usa "Nueva Emergencia" para cargar datos rápidos. Al guardar, se genera una ficha innegociable.
+- **Notificación WhatsApp:** Puedes enviar un resumen automático al grupo del Cuerpo Activo con un solo clic.
+- **Geolocalización:** Si el dispositivo tiene GPS, capturará la ubicación exacta del siniestro.
 
-## 2. Inventario y Stock
-*   **Carga inicial:** Ingresa cada herramienta o consumible (EPI, mangueras, etc.).
-*   **Alertas:** El sistema marcará en rojo cuando el stock sea inferior al mínimo configurado.
-*   **Ubicación:** Define en qué estante o depósito está cada elemento para agilizar búsquedas.
+## 📝 2. Libreta de Guardia Digital
+- **Novedades:** Cada guardia debe registrar sus novedades. El sistema bloquea las entradas antiguas para evitar alteraciones.
+- **Relevo:** Asegúrate de cerrar tu guardia antes de que el siguiente turno inicie sesión.
 
-## 3. Finanzas y Subsidios (Ley 25.054)
-*   **Subsidios:** Registra el origen (Nacional/Provincial) y el monto.
-*   **Rendición:** A medida que realizas compras, carga el comprobante (Factura) vinculada al subsidio. 
-*   **Control:** El sistema te mostrará cuánto dinero queda "en caja" de cada subsidio para evitar desvíos de fondos.
+## 📦 3. Logística (Vehículos e Inventario)
+- **Checklist:** Revisa el estado de las herramientas y móviles cada mañana.
+- **Alertas Rojas:** Si ves un icono de alerta, significa que hay un vencimiento próximo (VTV, Seguro) o falta de stock de insumos críticos.
 
-## 4. Flota de Vehículos
-*   **Estatus:** Marca los móviles como "En Servicio" o "Fuera de Servicio".
-*   **Mantenimiento:** Carga los cambios de aceite, VTV y seguros. El sistema te avisará 15 días antes de que venzan.
+## 💰 4. Administración y Subsidios
+- **Caja Chica:** Cada movimiento de dinero debe registrarse para mantener el balance al día.
+- **Rendición de Cuentas:** Vincula cada gasto a su subsidio correspondiente para generar reportes oficiales (Ley 25.054) automáticamente.
 
-## 5. Cuerpo Activo (Personal)
-*   **Legajos:** Cada bombero tiene su ficha con datos médicos, jerarquía y estado de asistencia.
-*   **Asistencia:** Puedes ver quiénes están en el cuartel en tiempo real según el módulo de Guardias.
+## 📅 5. Gestión de Canchas / Alquileres
+- **Calendario:** Visualiza los turnos libres y ocupados.
+- **Cobros:** El sistema separa automáticamente el monto de la seña y el saldo final, integrándolo a la caja general.
 
-## 6. Personalización (Solo Admins)
-Ve a **Configuración -> Interfaz** para cambiar colores, agrandar botones para las pantallas táctiles de las tablets o cambiar los nombres de los menús.
+## 🔑 6. Configuración de Usuario
+- **Privacidad:** Cambia tu contraseña periódicamente desde tu perfil.
+- **Permisos:** Si no ves un módulo, contacta al Administrador del sistema para que habilite tu acceso.

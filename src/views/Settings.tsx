@@ -41,6 +41,7 @@ const ALL_PERMISSIONS: { id: AppPermission; name: string; desc: string }[] = [
 ];
 
 export default function Settings() {
+  const { profile } = useAuth();
   const [tab, setTab] = useState<'users' | 'audit' | 'ui' | 'profile'>('profile');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);

@@ -78,6 +78,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       label: 'GRUPO RECURSOS',
       items: [
         { name: 'Personal', icon: UserCheck, path: '/personnel', perm: 'personnel' },
+        { name: 'Presentismo', icon: Activity, path: '/attendance', perm: 'attendance' },
         { name: 'Vehículos', icon: Car, path: '/fleet', perm: 'fleet', badge: 'mantenimiento' },
         { name: 'Inventario', icon: Package, path: '/inventory', perm: 'inventory' },
         { name: 'Agenda / Turnos', icon: Calendar, path: '/agenda', perm: 'agenda' },
@@ -88,7 +89,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       items: [
         { name: 'Finanzas', icon: Wallet, path: '/finances', perm: 'finances' },
         { name: 'Cancha', icon: ShieldHalf, path: '/rentals', perm: 'cancha' },
-        { name: 'Subsidios', icon: BuildingBank, path: '/subsidies', perm: 'subsidies' },
+        { name: 'Subsidies', icon: Landmark, path: '/subsidies', perm: 'subsidies' },
         { name: 'Alertas', icon: Bell, path: '/alerts', perm: 'alerts', badge: 'alertas' },
         { name: 'Reportes', icon: BarChart3, path: '/reports', perm: 'reports' },
       ]

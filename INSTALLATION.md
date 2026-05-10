@@ -1,24 +1,41 @@
-# Guía de Instalación - Cuartel de Bomberos Chimpay
+# Guía de Instalación - SGP-B
 
-Este documento explica cómo poner en marcha el sistema en el cuartel y conectar múltiples equipos.
+Este documento explica cómo poner en marcha el sistema en el cuartel y conectar múltiples equipos (PCs, Tablets, Celulares).
 
-## 1. Requisitos Previos
-*   **Servidor:** Una PC que estará siempre encendida (puede ser la de administración). Debe tener instalado [Node.js](https://nodejs.org/).
-*   **Red:** Todos los equipos (PC de guardia, Tablets, Celulares) deben estar conectados a la misma red Wi-Fi o cableada que el Servidor.
+## 📋 1. Requisitos Previos
 
-## 2. Instalación en el Servidor
-1.  Descarga el código del sistema en la PC Servidor.
-2.  Abre una terminal (CMD o PowerShell) en la carpeta del proyecto.
-3.  Ejecuta: `npm install` para instalar las dependencias.
-4.  Ejecuta: `npm run build` para preparar el sistema.
-5.  Ejecuta: `npm run start` para iniciar el servidor.
+*   **Servidor:** Una PC que estará siempre encendida (Recomendado: Windows 10/11 o Linux). Debe tener instalado [Node.js v18 o superior](https://nodejs.org/).
+*   **Red:** Todos los equipos que usarán el sistema deben estar conectados a la misma red (Wi-Fi o cableada).
+*   **Acceso:** Conocimientos básicos para abrir una terminal (CMD o PowerShell).
 
-## 3. Conexión de otros equipos (Red Local)
-Para que una tablet o la PC de guardia vea el sistema:
-1.  **Obtener la IP del Servidor:** En la PC servidor, abre la terminal y escribe `ipconfig`. Busca "Dirección IPv4" (ejemplo: `192.168.1.15`).
-2.  **Acceder desde otro equipo:** Abre el navegador (Chrome recomendado) y escribe la IP seguida de `:3000`.
-    *   Ejemplo: `http://192.168.1.15:3000`
-3.  **Tip:** Crea un acceso directo en el escritorio o pantalla de inicio de las tablets para entrar con un solo toque.
+## 💻 2. Puesta en Marcha del Servidor
 
-## 4. Configuración de Seguridad
-Si los otros equipos no cargan, asegúrate de que el **Firewall de Windows** en el servidor permita tráfico por el puerto **3000**.
+1.  **Descargar:** Descarga el código y descomprímelo en la PC Servidor.
+2.  **Terminal:** Abre una terminal en la carpeta del proyecto.
+3.  **Instalar:** Ejecuta el siguiente comando para descargar las librerías necesarias:
+    ```bash
+    npm install
+    ```
+4.  **Construir:** Prepara el sistema para su uso:
+    ```bash
+    npm run build
+    ```
+5.  **Iniciar:** Lanza el servidor definitivo:
+    ```bash
+    npm run start
+    ```
+
+## 🌐 3. Acceso desde otros equipos (Red Local)
+
+Para que una tablet en la guardia o el jefe desde su oficina vean el sistema:
+
+1.  **Obtener IP del Servidor:** En la PC servidor, abre la terminal y escribe `ipconfig`. Busca el número bajo "Dirección IPv4" (ejemplo: `192.168.1.50`).
+2.  **Navegador:** En cualquier otro equipo de la red, abre Chrome o Edge y escribe:
+    `http://192.168.1.50:3000`
+3.  **Acceso Directo:** Se recomienda "Instalar como aplicación" (PWA) o crear un acceso directo en el escritorio para entrar rápidamente.
+
+## 🛡️ 4. Solución de Problemas
+
+*   **No conecta:** Asegúrate de que el **Firewall de Windows** en la PC Servidor tenga habilitado el puerto **3000** (Entrada y Salida).
+*   **Pantalla en blanco:** Verifica que el comando `npm run build` haya terminado sin errores.
+*   **Base de Datos:** El archivo `bomberos.db` se creará automáticamente al iniciar. No es necesario configurarlo manualmente.

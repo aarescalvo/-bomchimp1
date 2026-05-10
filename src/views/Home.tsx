@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { 
   Flame, 
   Users, 
@@ -18,7 +20,6 @@ import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../components/AuthProvider';
-import { format } from 'date-fns';
 
 export default function Home() {
   const [incidents, setIncidents] = useState<any[]>([]);

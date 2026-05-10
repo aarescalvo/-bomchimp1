@@ -1,7 +1,10 @@
 import Database from "better-sqlite3";
 
 export const db = new Database("bomberos.db");
-export const JWT_SECRET = "bomberos-secret-key-local-123";
+export const JWT_SECRET = process.env.JWT_SECRET || "bomberos-secret-key-local-123";
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn("WARNING: JWT_SECRET not set in production. Using default placeholder.");
+}
 
 export function initDb() {
   db.exec(`
@@ -12,7 +15,55 @@ export function initDb() {
       displayName TEXT,
       role TEXT,
       email TEXT,
-      permissions TEXT DEFAULT '["dashboard"]'
+      permissions TEXT DEFAULT '["dashboard"]',
+      mustChangePassword INTEGER DEFAULT 0
+    );
+
+    -- Libreta de guardia avanzada (Mejora 11)
+    CREATE TABLE IF NOT EXISTS guard_log (
+      id TEXT PRIMARY KEY,
+      shiftDate DATE NOT NULL,
+      shiftType TEXT NOT NULL, -- 'morning', 'afternoon', 'night'
+      content TEXT NOT NULL,
+      authorId TEXT NOT NULL,
+      authorName TEXT NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      editedAt DATETIME,
+      lockedAt DATETIME,
+      hidden INTEGER DEFAULT 0
+    );
+
+    -- Asistencia y Horas (Mejora 15)
+    CREATE TABLE IF NOT EXISTS attendance (
+      id TEXT PRIMARY KEY,
+      firefighterId TEXT NOT NULL,
+      checkIn DATETIME NOT NULL,
+      checkOut DATETIME,
+      activityType TEXT NOT NULL, -- 'guard', 'training', 'drill', 'maintenance', 'special'
+      notes TEXT,
+      registeredBy TEXT NOT NULL,
+      registeredByName TEXT NOT NULL,
+      FOREIGN KEY (firefighterId) REFERENCES firefighters(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS monthly_hour_requirements (
+      id TEXT PRIMARY KEY,
+      firefighterId TEXT,          -- NULL = aplica a todos por defecto
+      requiredHours INTEGER NOT NULL DEFAULT 40,
+      month TEXT,                  -- formato 'YYYY-MM', NULL = aplica a todos los meses
+      FOREIGN KEY (firefighterId) REFERENCES firefighters(id)
+    );
+
+    -- Notificaciones (Mejora 10)
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      type TEXT, -- 'vtv', 'license', 'medical', 'scuba', 'insurance'
+      message TEXT,
+      dueDate DATE,
+      targetId TEXT, -- ID del objeto que vence (vehículo, bombero, etc)
+      sentAt DATETIME,
+      readAt DATETIME,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS firefighters (

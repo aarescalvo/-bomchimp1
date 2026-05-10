@@ -4,17 +4,9 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { logAction } from '../utils/logger';
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { inventorySchema } from '../schemas/inventory';
 
 const router = Router();
-
-const inventorySchema = z.object({
-  name: z.string().min(1),
-  category: z.string().optional(),
-  quantity: z.number().int(),
-  unit: z.string().optional(),
-  minStock: z.number().int().optional()
-});
 
 router.get("/", authenticateToken, (req, res) => {
   const items = db.prepare("SELECT * FROM inventory").all();

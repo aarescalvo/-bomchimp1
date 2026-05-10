@@ -53,31 +53,19 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const configArr = await apiFetch('/api/ui-settings');
-        // configArr is likely an array of {key, value} based on server side table
-        const config: any = {};
-        if (Array.isArray(configArr)) {
-          configArr.forEach(item => {
-            try {
-              config[item.key] = typeof item.value === 'string' && (item.value.startsWith('{') || item.value.startsWith('[')) 
-                ? JSON.parse(item.value) 
-                : item.value;
-            } catch {
-              config[item.key] = item.value;
-            }
+        const config = await apiFetch('/api/ui-settings');
+        
+        if (config && typeof config === 'object' && !Array.isArray(config)) {
+          if (config.theme) setTheme(config.theme);
+          if (config.menu_labels) setLabels(config.menu_labels);
+          
+          setIdentity({
+            nombre: config.cuartel_nombre || 'Bomberos Voluntarios de Chimpay',
+            ciudad: config.cuartel_ciudad || 'Chimpay',
+            numero: config.cuartel_numero || '',
+            logo: config.cuartel_logo || null
           });
         }
-
-        if (config.theme) setTheme(config.theme);
-        if (config.menu_labels) setLabels(config.menu_labels);
-        
-        setIdentity({
-          nombre: config.cuartel_nombre || 'Bomberos Voluntarios de Chimpay',
-          ciudad: config.cuartel_ciudad || 'Chimpay',
-          numero: config.cuartel_numero || '',
-          logo: config.cuartel_logo || null
-        });
-
       } catch (err) {
         console.error("Error loading UI settings", err);
       } finally {

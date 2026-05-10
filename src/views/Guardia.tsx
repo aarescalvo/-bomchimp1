@@ -52,7 +52,7 @@ export default function Guardia() {
     try {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, val]) => {
-        if (val) params.append(key, val);
+        if (val) params.append(key, val as string);
       });
       const response = await apiFetch(`/api/guardia?${params.toString()}`);
       setLogs(response.data);

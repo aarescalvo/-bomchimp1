@@ -23,6 +23,11 @@ import rentalRoutes from "./src/server/routes/rentals";
 import staffRoutes from "./src/server/routes/staff";
 import shiftRoutes from "./src/server/routes/shifts";
 import settingsRoutes from "./src/server/routes/settings";
+import attendanceRoutes from "./src/server/routes/attendance";
+import exportRoutes from "./src/server/routes/export";
+import guardLogRoutes from "./src/server/routes/guard_log";
+import notificationRoutes from "./src/server/routes/notifications";
+import { setupCronJobs } from "./src/server/utils/cron";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +38,9 @@ async function startServer() {
   // Initialize DB
   initDb();
 
+  // Initialize Cron Jobs
+  setupCronJobs();
+
   // Seed Admin User
   const adminExists = db.prepare("SELECT * FROM users WHERE username = ?").get("admin");
   if (!adminExists) {
@@ -40,7 +48,7 @@ async function startServer() {
     const allPerms = JSON.stringify([
       "dashboard", "incidents", "inventory", "agenda", "finances", 
       "rentals", "staff", "fleet", "personnel", "settings", 
-      "reports", "subsidies"
+      "reports", "subsidies", "attendance"
     ]);
 
     db.prepare("INSERT OR IGNORE INTO ui_settings (key, value) VALUES (?, ?)")
@@ -51,11 +59,11 @@ async function startServer() {
         dashboard: "Resumen", incidents: "Incidencias", inventory: "Inventario", 
         agenda: "Agenda", finances: "Caja", rentals: "Alquileres", 
         staff: "Guardia", fleet: "Parque Automotor", personnel: "Cuerpo Activo", 
-        subsidies: "Subsidios", reports: "Informes"
+        subsidies: "Subsidios", reports: "Informes", attendance: "Presentismo"
       }));
 
-    db.prepare("INSERT INTO users (id, username, password, displayName, role, permissions) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(crypto.randomUUID(), "admin", hashedPassword, "Cte. Juan Diaz", "admin", allPerms);
+    db.prepare("INSERT INTO users (id, username, password, displayName, role, permissions, mustChangePassword) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(crypto.randomUUID(), "admin", hashedPassword, "Cte. Juan Diaz", "admin", allPerms, 1);
   }
 
   // Middleware
@@ -78,11 +86,18 @@ async function startServer() {
   app.use("/api/staff", staffRoutes);
   app.use("/api/shifts", shiftRoutes);
   app.use("/api/ui-settings", settingsRoutes);
+  app.use("/api/attendance", attendanceRoutes);
+  app.use("/api/export", exportRoutes);
+  app.use("/api/guard-log", guardLogRoutes);
+  app.use("/api/notifications", notificationRoutes);
 
   // Global Error Handler
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Ocurrió un error interno en el servidor" });
+    console.error(`[ERROR] ${new Date().toISOString()} - ${err.message}`);
+    res.status(500).json({ 
+      error: "Error interno del servidor", 
+      detail: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
   });
 
   // Vite middleware for development

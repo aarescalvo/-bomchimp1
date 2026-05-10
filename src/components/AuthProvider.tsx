@@ -13,7 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<(UserProfile & { mustChangePassword?: boolean }) | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Comprobar si hay una sesión activa al cargar
@@ -27,7 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: '',
           role: user.role,
           status: 'active',
-          permissions: user.permissions
+          permissions: user.permissions,
+          mustChangePassword: user.mustChangePassword
         });
       } catch (err) {
         setProfile(null);
@@ -49,7 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: '',
       role: user.role,
       status: 'active',
-      permissions: user.permissions
+      permissions: user.permissions,
+      mustChangePassword: user.mustChangePassword
     });
   };
 

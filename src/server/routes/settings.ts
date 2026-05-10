@@ -4,11 +4,17 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-router.get("/", authenticateToken, (req, res) => {
+router.get("/", (req, res) => {
   try {
     const settings = db.prepare("SELECT * FROM ui_settings").all();
     const config: any = {};
-    settings.forEach((s: any) => { config[s.key] = JSON.parse(s.value); });
+    settings.forEach((s: any) => {
+      try {
+        config[s.key] = JSON.parse(s.value);
+      } catch {
+        config[s.key] = s.value;
+      }
+    });
     res.json(config);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener configuración" });

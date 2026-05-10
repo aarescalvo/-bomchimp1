@@ -6,22 +6,37 @@ import { firefighterSchema, firefighterUpdateSchema } from '../schemas/firefight
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
 
-const router = Router();
+import { getPaginationParams, formatPaginatedResponse, FIREFIGHTER_UPDATABLE_FIELDS } from '../utils/helpers';
 
-// Whitelist of allowed columns for updates
-const FIREFIGHTER_FIELDS = [
-  'firstName', 'lastName', 'dni', 'birthDate', 'rank', 'bloodType', 
-  'phone', 'email', 'joinDate', 'status', 'trainings', 
-  'licenseExpiration', 'medicalExpiration', 'eppStatus'
-];
+const router = Router();
 
 router.get("/", authenticateToken, requirePermission('personnel'), (req, res) => {
   try {
-    const firefighters = db.prepare("SELECT * FROM firefighters").all();
-    res.json(firefighters.map((f: any) => ({ 
+    const { page, limit, offset } = getPaginationParams(req);
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+
+    let query = "FROM firefighters WHERE 1=1";
+    const params: any[] = [];
+
+    if (search) {
+      query += " AND (firstName LIKE ? OR lastName LIKE ? OR dni LIKE ?)";
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (status) {
+      query += " AND status = ?";
+      params.push(status);
+    }
+
+    const total = (db.prepare(`SELECT COUNT(*) as count ${query}`).get(...params) as any).count;
+    const data = db.prepare(`SELECT * ${query} LIMIT ? OFFSET ?`).all(...params, limit, offset) as any[];
+
+    const formatted = data.map((f: any) => ({ 
       ...f, 
       trainings: JSON.parse(f.trainings || '[]') 
-    })));
+    }));
+
+    res.json(formatPaginatedResponse(formatted, total, page, limit));
   } catch (error) {
     res.status(500).json({ error: "Error al obtener bomberos" });
   }
@@ -74,7 +89,7 @@ router.patch("/:id", authenticateToken, requirePermission('personnel'), (req: Au
     if (updates.trainings) updates.trainings = JSON.stringify(updates.trainings);
     
     // SQL INJECTION PREVENTION: Validar keys contra whitelist
-    const keys = Object.keys(updates).filter(k => FIREFIGHTER_FIELDS.includes(k));
+    const keys = Object.keys(updates).filter(k => FIREFIGHTER_UPDATABLE_FIELDS.includes(k));
     
     if (keys.length === 0) {
       return res.status(400).json({ error: "No se proporcionaron campos válidos para actualizar" });

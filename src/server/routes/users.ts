@@ -5,18 +5,9 @@ import { logAction } from '../utils/logger';
 import { AuthRequest } from '../../types/auth';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { userSchema, userUpdateSchema } from '../schemas/users';
 
 const router = Router();
-
-const userSchema = z.object({
-  username: z.string().min(3, "Usuario demasiado corto"),
-  password: z.string().min(6, "Contraseña mínima 6 caracteres").optional(),
-  displayName: z.string().min(1, "Nombre es requerido"),
-  role: z.enum(['admin', 'user']),
-  email: z.string().email().optional().or(z.literal('')),
-  permissions: z.array(z.string()).default(['dashboard'])
-});
 
 router.get("/", authenticateToken, requireAdmin, (req, res) => {
   const users = db.prepare("SELECT id, username, displayName, role, email, permissions FROM users").all();
@@ -28,8 +19,8 @@ router.post("/", authenticateToken, requireAdmin, (req: AuthRequest, res) => {
     const result = userSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
-    const { username, password, displayName, role, email, permissions } = result.data;
-    if (!password) return res.status(400).json({ error: "Contraseña requerida para nuevo usuario" });
+    const { username, password, displayName, role, permissions } = result.data;
+    const email = (result.data as any).email || '';
 
     const hashedPassword = bcrypt.hashSync(password, 10);
     const id = crypto.randomUUID();
@@ -49,7 +40,7 @@ router.post("/", authenticateToken, requireAdmin, (req: AuthRequest, res) => {
 
 router.patch("/:id", authenticateToken, requireAdmin, (req: AuthRequest, res) => {
   try {
-    const result = userSchema.partial().safeParse(req.body);
+    const result = userUpdateSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
     const updates = result.data as any;

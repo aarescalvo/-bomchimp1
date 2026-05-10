@@ -12,7 +12,21 @@ export type AppPermission =
   | 'personnel' 
   | 'settings'
   | 'reports'
-  | 'subsidies';
+  | 'subsidies'
+  | 'attendance'
+  | 'salidas'
+  | 'guardia'
+  | 'alerts';
+
+export interface UserRow {
+  id: string;
+  username: string;
+  password?: string;
+  displayName: string;
+  role: UserRole;
+  permissions: string; // JSON string
+  mustChangePassword: number;
+}
 
 export interface UserProfile {
   uid: string;

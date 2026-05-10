@@ -4,29 +4,9 @@ import { authenticateToken, requirePermission } from '../middleware/auth';
 import { logAction } from '../utils/logger';
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { subsidySchema, subsidyExpenseSchema } from '../schemas/subsidies';
 
 const router = Router();
-
-const subsidySchema = z.object({
-  name: z.string().min(1),
-  origin: z.string().min(1),
-  resolutionNumber: z.string().optional(),
-  amount: z.number().min(0),
-  receivedDate: z.string().optional(),
-  expirationDate: z.string().optional(),
-  status: z.enum(['active', 'expired', 'exhausted']).default('active')
-});
-
-const expenseSchema = z.object({
-  category: z.string().min(1),
-  description: z.string().min(1),
-  amount: z.number().min(0.01),
-  invoiceNumber: z.string().optional(),
-  vendor: z.string().optional(),
-  date: z.string().optional(),
-  attachmentUrl: z.string().optional()
-});
 
 router.get("/", authenticateToken, (req, res) => {
   const subsidies = db.prepare("SELECT * FROM subsidies ORDER BY receivedDate DESC").all();
@@ -70,7 +50,7 @@ router.get("/:id/expenses", authenticateToken, requirePermission('subsidies'), (
 
 router.post("/:id/expenses", authenticateToken, requirePermission('subsidies'), (req: AuthRequest, res) => {
   try {
-    const result = expenseSchema.safeParse(req.body);
+    const result = subsidyExpenseSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
     const expense = { 

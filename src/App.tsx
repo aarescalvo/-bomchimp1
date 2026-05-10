@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { UiSettingsProvider } from './components/UiSettingsProvider';
 import { AppLayout } from './components/AppLayout';
+import { apiFetch } from './lib/api';
 import { Flame, LogIn } from 'lucide-react';
 import { Toaster } from 'sonner';
 import Home from './views/Home';
@@ -18,6 +19,7 @@ import Settings from './views/Settings';
 import Reports from './views/Reports';
 import Subsidies from './views/Subsidies';
 import Alerts from './views/Alerts';
+import Attendance from './views/Attendance';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -39,7 +41,88 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   
   if (!user) return <Navigate to="/login" />;
   
+  if (user.mustChangePassword) {
+    return <ForcedChangePassword />;
+  }
+  
   return <AppLayout>{children}</AppLayout>;
+}
+
+function ForcedChangePassword() {
+  const [newPassword, setNewPassword] = React.useState('');
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const { logout } = useAuth();
+
+  const handleForcedChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await apiFetch('/api/auth/change-password', {
+        method: 'PATCH',
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      alert('Contraseña actualizada con éxito. Por favor reinicie sesión.');
+      logout();
+    } catch (err: any) {
+      setError(err.message || 'Error al cambiar contraseña');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6 font-sans">
+      <div className="w-full max-w-sm bg-white p-10 rounded-[40px] shadow-2xl space-y-8">
+        <div className="text-center">
+           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+             <LogIn className="w-8 h-8 text-red-600" />
+           </div>
+           <h2 className="text-2xl font-black text-slate-900 uppercase italic">Cambio Obligatorio</h2>
+           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Debe actualizar su clave para continuar</p>
+        </div>
+        
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest border border-red-100">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleForcedChange} className="space-y-6">
+           <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Clave Actual</label>
+              <input 
+                 type="password" 
+                 value={currentPassword}
+                 onChange={e => setCurrentPassword(e.target.value)}
+                 className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none focus:border-red-600 transition-all"
+                 required
+              />
+           </div>
+           <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nueva Clave (Mín. 8 chars)</label>
+              <input 
+                 type="password" 
+                 value={newPassword}
+                 onChange={e => setNewPassword(e.target.value)}
+                 className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none focus:border-red-600 transition-all"
+                 placeholder="Mínimo 8 caracteres"
+                 required
+              />
+           </div>
+           <button 
+             type="submit" 
+             disabled={loading}
+             className="w-full h-16 bg-red-600 text-white rounded-2xl font-black uppercase tracking-[.3em] text-[10px] shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all disabled:opacity-50"
+           >
+             {loading ? 'Procesando...' : 'Actualizar y Salir'}
+           </button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function Login() {
@@ -48,69 +131,21 @@ function Login() {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-  const [mustChangePassword, setMustChangePassword] = React.useState(false);
-  const [newPassword, setNewPassword] = React.useState('');
-  const [userId, setUserId] = React.useState('');
   
-  if (user) return <Navigate to="/" />;
+  if (user && !user.mustChangePassword) return <Navigate to="/" />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
     setError('');
     try {
-      const res: any = await login(username, password);
-      if (res?.mustChangePassword) {
-        setMustChangePassword(true);
-        setUserId(res.userId);
-      }
+      await login(username, password);
     } catch (err: any) {
       setError(err.message || 'Credenciales incorrectas');
     } finally {
       setIsLoggingIn(false);
     }
   };
-
-  const handleForcedChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiFetch('/api/auth/change-password-forced', {
-        method: 'POST',
-        body: JSON.stringify({ userId, newPassword })
-      });
-      alert('Contraseña actualizada. Inicie sesión nuevamente.');
-      setMustChangePassword(false);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  if (mustChangePassword) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
-        <div className="w-full max-w-sm bg-white p-8 rounded-[32px] shadow-2xl space-y-8">
-          <div className="text-center">
-             <h2 className="text-2xl font-black text-slate-900 uppercase">Cambio Obligatorio</h2>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Debe actualizar su clave para continuar</p>
-          </div>
-          <form onSubmit={handleForcedChange} className="space-y-6">
-             <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nueva Clave</label>
-                <input 
-                   type="password" 
-                   value={newPassword}
-                   onChange={e => setNewPassword(e.target.value)}
-                   className="w-full h-14 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold outline-none focus:border-red-600"
-                   placeholder="Mínimo 6 caracteres"
-                   required
-                />
-             </div>
-             <button type="submit" className="w-full h-14 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px]">Actualizar y Reingresar</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-slate-950 font-sans">
@@ -227,6 +262,7 @@ export default function App() {
             <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/subsidies" element={<PrivateRoute><Subsidies /></PrivateRoute>} />
             <Route path="/alerts" element={<PrivateRoute><Alerts /></PrivateRoute>} />
+            <Route path="/attendance" element={<PrivateRoute><Attendance /></PrivateRoute>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

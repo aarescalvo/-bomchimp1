@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import authRouter from '../routes/auth';
+import authRouter from '../server/routes/auth';
 
 // Mocking the DB
 vi.mock('../db/schema', () => ({

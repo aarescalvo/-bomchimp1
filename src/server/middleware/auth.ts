@@ -11,7 +11,10 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     const user = jwt.verify(token, JWT_SECRET) as UserPayload;
     req.user = user;
     next();
-  } catch {
+  } catch (err: any) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: "Sesión expirada. Volvé a iniciar sesión." });
+    }
     res.status(403).json({ error: "Token inválido" });
   }
 };

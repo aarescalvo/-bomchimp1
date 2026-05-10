@@ -3,16 +3,9 @@ import { db } from '../db';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { financeSchema } from '../schemas/finances';
 
 const router = Router();
-
-const transactionSchema = z.object({
-  amount: z.number(),
-  category: z.string().min(1),
-  description: z.string().optional(),
-  type: z.enum(['income', 'expense'])
-});
 
 router.get("/", authenticateToken, (req, res) => {
   const txs = db.prepare("SELECT * FROM finances ORDER BY timestamp DESC").all();
@@ -21,7 +14,7 @@ router.get("/", authenticateToken, (req, res) => {
 
 router.post("/", authenticateToken, requirePermission('finances'), (req: AuthRequest, res) => {
   try {
-    const result = transactionSchema.safeParse(req.body);
+    const result = financeSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
     const tx = { 

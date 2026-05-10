@@ -3,7 +3,7 @@ import { db } from '../db';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { rentalSchema } from '../schemas/rentals';
 
 const router = Router();
 
@@ -14,11 +14,14 @@ router.get("/", authenticateToken, (req, res) => {
 
 router.post("/", authenticateToken, requirePermission('rentals'), (req: AuthRequest, res) => {
   try {
-    const rental = { id: crypto.randomUUID(), ...req.body };
+    const result = rentalSchema.safeParse(req.body);
+    if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
+
+    const rental = { id: crypto.randomUUID(), ...result.data };
     db.prepare(`
-      INSERT INTO rentals (id, customerName, customerPhone, startTime, endTime, price, paymentStatus) 
+      INSERT INTO rentals (id, customerName, customerPhone, startTime, endTime, price, status) 
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(rental.id, rental.customerName, rental.customerPhone, rental.startTime, rental.endTime, rental.price, rental.paymentStatus);
+    `).run(rental.id, rental.customerName, rental.customerPhone, rental.startTime, rental.endTime, rental.price, rental.status);
     res.json(rental);
   } catch (error) {
     res.status(500).json({ error: "Error al crear alquiler" });

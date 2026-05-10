@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import firefightersRouter from '../routes/firefighters';
+import firefightersRouter from '../server/routes/firefighters';
 
 // Mock DB
 vi.mock('../db/schema', () => ({

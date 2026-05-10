@@ -1,43 +1,61 @@
-# Sistema de Gestión para Bomberos (SGB-B)
+# Sistema de Gestión Profesional para Cuarteles de Bomberos (SGP-B)
 
-Este es un sistema integral de gestión para cuarteles de bomberos, diseñado para centralizar la operatividad, administración y tesorería en una sola plataforma digital.
+Este es un sistema integral de gestión diseñado para centralizar la operatividad, administración, personal y finanzas de un Cuartel de Bomberos en una plataforma digital moderna, rápida y segura.
 
-## Características Principales
+## 🚀 Características Principales
 
-- **Dashboard Operativo**: Vista unificada de incidentes activos, personal de guardia y estado de flota.
-- **Libreta de Guardia**: Registro digital de novedades con firma de autor y límites de edición para auditoría.
-- **Gestión de Flota**: Control de vehículos, herramientas (cilindros ERA) con alertas de VTV, Seguro y Mantenimiento.
-- **Legajo de Personal**: Gestión de bomberos, cursos de capacitación (IBNCA) y habilitaciones.
-- **Tesorería y Finanzas**: Libro de caja con categorías predefinidas y reportes de balance mensual.
-- **Gestión de Cancha**: Sistema de alquiler de turnos con calendario, señas y cobros integrados a tesorería.
-- **Alertas Unificadas**: Panel centralizado de vencimientos críticos.
-- **Seguridad y Auditoría**: Sistema de roles y permisos con log de auditoría inalterable.
+### 📊 Gestión Operativa
+- **Dashboard en Tiempo Real**: Resumen de incidencias, personal de guardia y estado de la flota.
+- **Libreta de Guardia Digital**: Registro inalterable de novedades con cierre de guardia y auditoría.
+- **Mapa de Incidencias**: Visualización geográfica de siniestros y recursos disponibles.
 
-## Requisitos Técnicos
+### 🚒 Gestión de Activos y Flota
+- **Control de Flota**: Vencimientos de VTV, Seguro y Mantenimiento con alertas automáticas.
+- **Inventario Crítico**: Control de stock de herramientas, insumos y equipos de protección (EPP).
+- **Control de Cilindros ERA**: Seguimiento de pruebas hidráulicas y carga de aire.
 
-- **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons, Recharts, Framer Motion.
-- **Backend**: Express, SQLite3 (Better-SQLite3), JWT Authentication, Zod Validation.
-- **Seguridad**: contraseñas hasheadas con Bcrypt, validación de permisos por middleware.
+### 👤 Administración de Personal
+- **Legajo Digital**: Fichas completas de bomberos con historial médico y capacitaciones.
+- **Control de Asistencia**: Registro de horas de guardia, capacitaciones y actividades especiales.
+- **Gestión de Jerarquías**: Estructura de mando configurable.
 
-## Configuración Local
+### 💰 Finanzas y Tesorería
+- **Contabilidad Centralizada**: Registro de ingresos y egresos con categorías personalizables.
+- **Rendición de Subsidios**: Control estricto de fondos nacionales y provinciales (Ley 25.054).
+- **Gestión de Cancha/Alquileres**: Agenda de eventos con pagos integrados a la caja del cuartel.
 
-1. Clonar el repositorio.
-2. Instalar dependencias:
+### 🔐 Seguridad y Auditoría
+- **Roles y Permisos**: Acceso granular según la función (Admin, Operador, Jefe, Tesorero).
+- **Log de Auditoría**: Registro inalterable de quién hizo qué y cuándo.
+- **Basado en SQLite**: Base de datos local robusta, sin dependencias externas complejas.
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Lucide Icons, Recharts.
+- **Backend**: Node.js (Express), SQLite (Better-SQLite3), Zod (Validación), JWT (Seguridad).
+
+## 💻 Configuración Local
+
+1. **Instalar Dependencias**:
    ```bash
    npm install
    ```
-3. Configurar variables de entorno (`.env`):
-   - `JWT_SECRET`: Llave para firmas de tokens.
-4. Iniciar en modo desarrollo:
+2. **Construir el proyecto (opcional para desarrollo)**:
+   ```bash
+   npm run build
+   ```
+3. **Iniciar Servidor de Desarrollo**:
    ```bash
    npm run dev
    ```
 
-## Usuarios Predefinidos
+## 🔐 Credenciales de Acceso (Por Defecto)
 
-- **Admin**: `admin` / `admin123`
-- **Jefatura**: `jefe` / `bombero`
-- **Tesorero**: `tesorero` / `bombero`
+- **Usuario**: `admin`
+- **Contraseña**: `admin123`
+*(El sistema solicitará cambio de contraseña al primer ingreso por seguridad)*
 
-## Auditoría
-Todas las operaciones críticas (creación, edición, eliminación) son registradas en la tabla `audit_logs` con el usuario, marca de tiempo y detalles del cambio.
+---
+
+## 📄 Licencia
+Este proyecto es una herramienta para el fortalecimiento de las instituciones de emergencia. Puede ser adaptado y escalado según las necesidades de cada cuartel.

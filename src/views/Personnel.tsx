@@ -20,10 +20,11 @@ import {
 } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../components/AuthProvider';
 
 export default function Personnel() {
   const [personnel, setPersonnel] = useState<Firefighter[]>([]);
-  const [search, setSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const { profile } = useAuth();
@@ -50,7 +51,7 @@ export default function Personnel() {
   const loadPersonnel = async () => {
     try {
       const params = new URLSearchParams();
-      if (search) params.append('search', search);
+      if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (includeDeleted) params.append('includeDeleted', 'true');
       
@@ -64,7 +65,7 @@ export default function Personnel() {
   useEffect(() => {
     const timer = setTimeout(loadPersonnel, 300);
     return () => clearTimeout(timer);
-  }, [search, statusFilter, includeDeleted]);
+  }, [searchTerm, statusFilter, includeDeleted]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Está seguro de dar de baja a este miembro?')) return;
@@ -168,8 +169,8 @@ export default function Personnel() {
               type="text" 
               placeholder="Buscar por nombre o DNI..."
               className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-red-600/5 focus:border-red-600 outline-none transition-all placeholder:text-slate-400 text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           

@@ -3,17 +3,9 @@ import { db } from '../db';
 import { authenticateToken, requirePermission } from '../middleware/auth';
 import { AuthRequest } from '../../types/auth';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { agendaSchema } from '../schemas/agenda';
 
 const router = Router();
-
-const taskSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  dueDate: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  assignedTo: z.string().optional()
-});
 
 router.get("/", authenticateToken, (req, res) => {
   const tasks = db.prepare("SELECT * FROM agenda ORDER BY dueDate ASC").all();
@@ -22,7 +14,7 @@ router.get("/", authenticateToken, (req, res) => {
 
 router.post("/", authenticateToken, requirePermission('agenda'), (req: AuthRequest, res) => {
   try {
-    const result = taskSchema.safeParse(req.body);
+    const result = agendaSchema.safeParse(req.body);
     if (!result.success) return res.status(400).json({ error: result.error.issues[0].message });
 
     const task = { id: crypto.randomUUID(), ...result.data, status: "pending" };
