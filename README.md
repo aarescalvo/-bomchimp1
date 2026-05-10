@@ -34,19 +34,20 @@ Este es un sistema integral de gestión diseñado para centralizar la operativid
 - **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Lucide Icons, Recharts.
 - **Backend**: Node.js (Express), SQLite (Better-SQLite3), Zod (Validación), JWT (Seguridad).
 
-## 💻 Configuración Local
+## 💻 Configuración Local (PowerShell)
 
-1. **Instalar Dependencias**:
-   ```bash
+1. **Clonar e Ingresar**:
+   ```powershell
+   git clone https://github.com/aarescalvo/-bomchimp1.git BOMBEROS
+   cd BOMBEROS
+   ```
+2. **Instalar Dependencias**:
+   ```powershell
    npm install
    ```
-2. **Construir el proyecto (opcional para desarrollo)**:
-   ```bash
-   npm run build
-   ```
-3. **Iniciar Servidor de Desarrollo**:
-   ```bash
-   npm run dev
+3. **Iniciar Servidor**:
+   ```powershell
+   npm run start
    ```
 
 ## 🔐 Credenciales de Acceso (Por Defecto)

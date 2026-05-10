@@ -8,20 +8,19 @@ Este documento explica cómo poner en marcha el sistema en el cuartel y conectar
 *   **Red:** Todos los equipos que usarán el sistema deben estar conectados a la misma red (Wi-Fi o cableada).
 *   **Acceso:** Conocimientos básicos para abrir una terminal (CMD o PowerShell).
 
-## 💻 2. Puesta en Marcha del Servidor
+## 💻 2. Puesta en Marcha del Servidor (PowerShell)
 
-1.  **Descargar:** Descarga el código y descomprímelo en la PC Servidor.
-2.  **Terminal:** Abre una terminal en la carpeta del proyecto.
-3.  **Instalar:** Ejecuta el siguiente comando para descargar las librerías necesarias:
-    ```bash
+1.  **Clonar el repositorio**: Abre PowerShell y escribe:
+    ```powershell
+    cd C:\BOMBEROS
+    git clone https://github.com/aarescalvo/-bomchimp1.git .
+    ```
+2.  **Instalar**: Descarga las librerías necesarias:
+    ```powershell
     npm install
     ```
-4.  **Construir:** Prepara el sistema para su uso:
-    ```bash
-    npm run build
-    ```
-5.  **Iniciar:** Lanza el servidor definitivo:
-    ```bash
+3.  **Iniciar**: Lanza el sistema:
+    ```powershell
     npm run start
     ```
 
